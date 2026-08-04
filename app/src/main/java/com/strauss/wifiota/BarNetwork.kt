@@ -6,6 +6,7 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.wifi.WifiNetworkSpecifier
+import android.os.PatternMatcher
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
@@ -43,10 +44,10 @@ class BarNetwork(context: Context) {
      *
      * @param passphrase WPA2 password, or null/empty for an open AP.
      */
-    suspend fun connect(ssid: String, passphrase: String?): Network =
+    suspend fun connect(ssidPrefix: String, passphrase: String?): Network =
         suspendCancellableCoroutine { cont ->
             val specifier = WifiNetworkSpecifier.Builder()
-                .setSsid(ssid)
+                .setSsidPattern(PatternMatcher(ssidPrefix, PatternMatcher.PATTERN_PREFIX))
                 .apply { if (!passphrase.isNullOrEmpty()) setWpa2Passphrase(passphrase) }
                 .build()
 
