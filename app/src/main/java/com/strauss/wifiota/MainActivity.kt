@@ -95,13 +95,14 @@ class MainActivity : AppCompatActivity() {
 
     // CONNECT
     private fun connect() {
+        // Empty prefix matches everything - Android then lists every network.
         val ssid = ssidField.text.toString().trim()
-        if (ssid.isEmpty()) { log("Enter the bar SSID first"); return }
 
         connectButton.isEnabled = false
         lifecycleScope.launch {
             try {
-                log("Joining $ssid ... approve the system dialog")
+                log(if (ssid.isEmpty()) "Searching all networks..."
+                    else "Searching for \"$ssid*\" ...")
                 barNetwork.connect(ssid, passField.text.toString())
                 log("Joined - this app's sockets are now pinned to the bar")
                 setStatus("LINK BOUND")
