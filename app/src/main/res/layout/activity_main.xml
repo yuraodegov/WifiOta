@@ -28,7 +28,7 @@
             android:id="@+id/ssidField"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Name prefix (empty = show all)"
+            android:hint="Name prefix, e.g. Water"
             android:inputType="text" />
 
         <EditText
