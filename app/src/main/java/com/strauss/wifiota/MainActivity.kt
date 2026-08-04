@@ -95,8 +95,9 @@ class MainActivity : AppCompatActivity() {
 
     // CONNECT
     private fun connect() {
-        // Empty prefix matches everything - Android then lists every network.
         val ssid = ssidField.text.toString().trim()
+        // Android rejects a match-all pattern, so a prefix is mandatory. Case matters.
+        if (ssid.isEmpty()) { log("Enter a name prefix, e.g. Water (case-sensitive)"); return }
 
         connectButton.isEnabled = false
         lifecycleScope.launch {
