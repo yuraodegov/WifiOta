@@ -82,7 +82,7 @@ class BarNetwork(context: Context) {
             }
 
             callback = cb
-            cm.requestNetwork(cb, CONNECT_TIMEOUT_MS)
+            cm.requestNetwork(request, cb, CONNECT_TIMEOUT_MS)
             cont.invokeOnCancellation { release() }
         }
 
