@@ -171,14 +171,19 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val version = Firmware.versionFromName(name, component)
-                val ok = client.upload(
-                    bytes = bytes,
-                    version = version,
-                    sha = sha,
-                    component = if (isRc) "" else component,
-                    transactionComplete = if (isRc) false else tcCheck.isChecked,
-                    autoRetry = retryCheck.isChecked
-                ) { line -> log(line) }
+                // Read the checkboxes here: they can only be touched on the UI thread.
+                val tc = if (isRc) false else tcCheck.isChecked
+                val retry = retryCheck.isChecked
+                val ok = withContext(Dispatchers.IO) {
+                    client.upload(
+                        bytes = bytes,
+                        version = version,
+                        sha = sha,
+                        component = if (isRc) "" else component,
+                        transactionComplete = tc,
+                        autoRetry = retry
+                    ) { line -> lifecycleScope.launch { log(line) } }
+                }
 
                 if (ok) {
                     if (component == "fizzz") {
