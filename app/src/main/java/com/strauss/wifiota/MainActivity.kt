@@ -186,14 +186,32 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val version = Firmware.versionFromName(name, component)
-                val ok = client.upload(
-                    bytes = bytes,
-                    version = version,
-                    sha = sha,
-                    component = if (isRc) "" else component,
-                    transactionComplete = if (isRc) false else tcCheck.isChecked,
-                    autoRetry = retryCheck.isChecked
-                ) { line -> log(line) }
+                // Read the checkboxes here: they may only be touched on the UI thread.
+                val tc = if (isRc) false else tcCheck.isChecked
+                val retry = retryCheck.isChecked
+                val sizeKb = bytes.size / 1024
+                val ok = withContext(Dispatchers.IO) {
+                    client.upload(
+                        bytes = bytes,
+                        version = version,
+                        sha = sha,
+                        component = if (isRc) "" else component,
+                        transactionComplete = tc,
+                        autoRetry = retry,
+                        onProgress = { percent ->
+                            lifecycleScope.launch {
+                                // Real figure: bytes actually handed to the socket.
+                                showUpload(percent, "Uploading $percent% of $sizeKb KB")
+                            }
+                        },
+                        onWait = { left ->
+                            lifecycleScope.launch {
+                                if (left > 0) busy("Bar busy - retrying in ${left}s")
+                                else busy("Retrying now")
+                            }
+                        }
+                    ) { line -> lifecycleScope.launch { log(line) } }
+                }
 
                 if (ok) {
                     // The bar gives no feedback while it writes, so this is a
