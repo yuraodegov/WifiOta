@@ -6,7 +6,8 @@ import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.RequestBody
+import okio.BufferedSink
 import java.util.concurrent.TimeUnit
 
 /**
@@ -24,6 +25,37 @@ import java.util.concurrent.TimeUnit
  *   500                                   -> bar not ready (MSA busy) -> retry
  *   connection failure                    -> bar rebooting -> retry
  */
+/**
+ * Streams the firmware in small chunks so real upload progress can be reported.
+ * A plain toRequestBody() writes everything in one go and gives no feedback.
+ */
+private class ProgressBody(
+    private val data: ByteArray,
+    private val onProgress: (Int) -> Unit
+) : RequestBody() {
+    override fun contentType() = "application/octet-stream".toMediaType()
+    override fun contentLength() = data.size.toLong()
+
+    override fun writeTo(sink: BufferedSink) {
+        var written = 0
+        var lastPercent = -1
+        while (written < data.size) {
+            val n = minOf(CHUNK, data.size - written)
+            sink.write(data, written, n)
+            written += n
+            val percent = written * 100 / data.size
+            // Report only on change - otherwise the UI thread is flooded.
+            if (percent != lastPercent) {
+                lastPercent = percent
+                onProgress(percent)
+            }
+        }
+        sink.flush()
+    }
+
+    private companion object { const val CHUNK = 32 * 1024 }
+}
+
 class OtaClient(network: Network, private val host: String) {
 
     private val client = OkHttpClient.Builder()
@@ -63,7 +95,8 @@ class OtaClient(network: Network, private val host: String) {
         version: String,
         sha: String,
         component: String,
-        transactionComplete: Boolean
+        transactionComplete: Boolean,
+        onProgress: (Int) -> Unit
     ): Triple<Int?, String, Boolean> {
         // Query parameters in the proven order: version, sha256, component,
         // transactionComplete. component may be empty (RC firmware).
@@ -79,7 +112,7 @@ class OtaClient(network: Network, private val host: String) {
 
         val request = Request.Builder()
             .url(url)
-            .post(bytes.toRequestBody("application/octet-stream".toMediaType()))
+            .post(ProgressBody(bytes, onProgress))
             .build()
 
         return try {
@@ -104,6 +137,8 @@ class OtaClient(network: Network, private val host: String) {
         component: String,
         transactionComplete: Boolean,
         autoRetry: Boolean,
+        onProgress: (Int) -> Unit,
+        onWait: (Int) -> Unit,
         log: (String) -> Unit
     ): Boolean {
         val attempts = if (autoRetry) RETRY_ON_500 + 1 else 1
@@ -112,7 +147,9 @@ class OtaClient(network: Network, private val host: String) {
 
         for (i in 1..attempts) {
             log("Attempt $i/$attempts...")
-            val (code, body, ok) = uploadOnce(bytes, version, sha, component, transactionComplete)
+            onProgress(0)
+            val (code, body, ok) =
+                uploadOnce(bytes, version, sha, component, transactionComplete, onProgress)
 
             when {
                 ok -> {
@@ -122,12 +159,12 @@ class OtaClient(network: Network, private val host: String) {
                 // 500 is not a broken request. The MSA is busy and the bar is
                 // not ready. Wait and repeat - do not restructure the request.
                 code == 500 && i < attempts -> {
-                    log("HTTP 500: $body - bar busy/MSA down. Retry in ${RETRY_WAIT_SEC}s")
-                    delay(RETRY_WAIT_SEC * 1000L)
+                    log("HTTP 500: $body - bar busy/MSA down")
+                    countdown(onWait)
                 }
                 code == null && i < attempts -> {
-                    log("Connection failed ($body). Bar may be rebooting. Retry in ${RETRY_WAIT_SEC}s")
-                    delay(RETRY_WAIT_SEC * 1000L)
+                    log("Connection failed ($body). Bar may be rebooting")
+                    countdown(onWait)
                 }
                 code == 400 -> {
                     log("HTTP 400: $body - wrong component/params.")
@@ -142,6 +179,15 @@ class OtaClient(network: Network, private val host: String) {
 
         log("All attempts failed. Check the addon (HC) is connected and MSA shows 'connected'.")
         return false
+    }
+
+    /** Exact 8 s wait, reported second by second - this one is not a guess. */
+    private suspend fun countdown(onWait: (Int) -> Unit) {
+        for (left in RETRY_WAIT_SEC downTo 1) {
+            onWait(left)
+            delay(1000)
+        }
+        onWait(0)
     }
 
     companion object {
