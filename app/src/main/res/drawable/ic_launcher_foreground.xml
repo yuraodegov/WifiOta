@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#B5D4F4"
+        android:fillType="evenOdd"
+        android:pathData="M86.48,63.85 L86.48,72.15 L82.16,73.86 L82.16,73.86 L83.53,78.30 L77.03,83.48 L73.00,81.16 L73.00,81.16 L70.38,85.00 L62.28,83.15 L61.58,78.55 L61.58,78.55 L56.95,78.89 L53.35,71.41 L56.50,68.00 L56.50,68.00 L53.35,64.59 L56.95,57.11 L61.58,57.45 L61.58,57.45 L62.28,52.85 L70.38,51.00 L73.00,54.84 L73.00,54.84 L77.03,52.52 L83.53,57.70 L82.16,62.14 L82.16,62.14 Z M63.80,68.00 a6.20,6.20 0 1,0 12.40,0 a6.20,6.20 0 1,0 -12.40,0 Z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M71.40,38.43 L71.40,49.57 L64.94,51.85 L64.94,51.85 L67.90,58.02 L60.02,65.90 L53.85,62.94 L53.85,62.94 L51.57,69.40 L40.43,69.40 L38.15,62.94 L38.15,62.94 L31.98,65.90 L24.10,58.02 L27.06,51.85 L27.06,51.85 L20.60,49.57 L20.60,38.43 L27.06,36.15 L27.06,36.15 L24.10,29.98 L31.98,22.10 L38.15,25.06 L38.15,25.06 L40.43,18.60 L51.57,18.60 L53.85,25.06 L53.85,25.06 L60.02,22.10 L67.90,29.98 L64.94,36.15 L64.94,36.15 Z M36.50,44.00 a9.50,9.50 0 1,0 19.00,0 a9.50,9.50 0 1,0 -19.00,0 Z" />
+
+    <path
+        android:fillColor="#0C447C"
+        android:pathData="M20,52 h68 a4,4 0 0 1 4,4 v14 a4,4 0 0 1 -4,4 h-68 a4,4 0 0 1 -4,-4 v-14 a4,4 0 0 1 4,-4 Z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M22,57 h13 v12 h-13 Z M25.5,60.5 h6 v5 h-6 Z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M39,57 h14 v3.5 h-5.2 v8.5 h-3.6 v-8.5 h-5.2 Z" />
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M63,57 l6.5,12 h-3.8 l-1.1,-2.2 h-3.2 l-1.1,2.2 h-3.8 Z M63,62 l-0.9,1.9 h1.8 Z" />
+</vector>

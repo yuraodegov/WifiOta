@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <EditText
+        android:id="@+id/ssidField"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Name prefix, e.g. Water"
+        android:inputType="text" />
+
+    <EditText
+        android:id="@+id/passField"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Passphrase"
+        android:inputType="textPassword" />
+
+    <EditText
+        android:id="@+id/ipField"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Bar IP"
+        android:inputType="text" />
+
+    <CheckBox
+        android:id="@+id/tcCheck"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:checked="true"
+        android:text="transactionComplete=true" />
+
+    <CheckBox
+        android:id="@+id/retryCheck"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:checked="true"
+        android:text="Auto-retry on HTTP 500" />
+</LinearLayout>
