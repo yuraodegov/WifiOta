@@ -19,6 +19,12 @@
         android:hint="Passphrase"
         android:inputType="textPassword" />
 
+    <CheckBox
+        android:id="@+id/showPass"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Show password" />
+
     <EditText
         android:id="@+id/ipField"
         android:layout_width="match_parent"
