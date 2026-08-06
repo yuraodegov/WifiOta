@@ -1,418 +1,216 @@
 package com.strauss.wifiota
 
-import android.app.AlertDialog
-import android.content.Context
-import android.content.Intent
-import android.graphics.Typeface
-import android.net.Uri
-import android.os.Bundle
-import android.view.View
-import android.view.WindowManager
-import android.widget.Button
-import android.widget.CheckBox
-import android.widget.EditText
-import android.widget.ProgressBar
-import android.widget.ScrollView
-import android.widget.TextView
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
-import androidx.documentfile.provider.DocumentFile
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import android.net.Network
+import kotlinx.coroutines.delay
+import okhttp3.HttpUrl
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import okio.BufferedSink
+import java.util.concurrent.TimeUnit
+
+/** What actually happened to an upload attempt. */
+enum class UploadOutcome {
+    /** The bar answered "uploaded successfully". */
+    CONFIRMED,
+
+    /** Every byte left the phone, then the link died before the reply came.
+     *  Normal for HMI: the bar reboots as soon as it has the image. */
+    DELIVERED_UNCONFIRMED,
+
+    FAILED
+}
 
 /**
- * Three-step wizard: connect -> pick firmware -> flash.
+ * Streams the firmware in small chunks so upload progress reflects the network.
  *
- * The order is enforced rather than suggested: a step's controls stay disabled
- * until the previous one actually succeeded, so nothing gets flashed over a
- * link that was never verified.
+ * flush() after every chunk is what makes the figure honest: without it Okio
+ * buffers the whole image in memory and the bar reports 100 % instantly while
+ * the device has barely started receiving.
  */
-class MainActivity : AppCompatActivity() {
+private class ProgressBody(
+    private val data: ByteArray,
+    private val onProgress: (Int) -> Unit
+) : RequestBody() {
+    override fun contentType() = "application/octet-stream".toMediaType()
+    override fun contentLength() = data.size.toLong()
 
-    private lateinit var bar1: View
-    private lateinit var bar2: View
-    private lateinit var bar3: View
-    private lateinit var stepCounter: TextView
-    private lateinit var stepTitle: TextView
-    private lateinit var stepHint: TextView
-    private lateinit var step1: View
-    private lateinit var step2: View
-    private lateinit var step3: View
-    private lateinit var searchButton: Button
-    private lateinit var pingButton: Button
-    private lateinit var hmiButton: Button
-    private lateinit var addonButton: Button
-    private lateinit var rcButton: Button
-    private lateinit var summary: TextView
-    private lateinit var uploadBar: ProgressBar
-    private lateinit var progressText: TextView
-    private lateinit var flashButton: Button
-    private lateinit var backButton: Button
-
-    private lateinit var barNetwork: BarNetwork
-    private var firmware = Firmware.Set()
-    private var component = "hmi"
-    private var step = 1
-
-    /** Kept in memory, shown on demand - the log is for diagnosis, not decoration. */
-    private val logLines = StringBuilder()
-
-    private val pickFolder = registerForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri -> uri?.let { onFolderPicked(it) } }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        bar1 = findViewById(R.id.bar1)
-        bar2 = findViewById(R.id.bar2)
-        bar3 = findViewById(R.id.bar3)
-        stepCounter = findViewById(R.id.stepCounter)
-        stepTitle = findViewById(R.id.stepTitle)
-        stepHint = findViewById(R.id.stepHint)
-        step1 = findViewById(R.id.step1)
-        step2 = findViewById(R.id.step2)
-        step3 = findViewById(R.id.step3)
-        searchButton = findViewById(R.id.searchButton)
-        pingButton = findViewById(R.id.pingButton)
-        hmiButton = findViewById(R.id.hmiButton)
-        addonButton = findViewById(R.id.addonButton)
-        rcButton = findViewById(R.id.rcButton)
-        summary = findViewById(R.id.summary)
-        uploadBar = findViewById(R.id.uploadBar)
-        progressText = findViewById(R.id.progressText)
-        flashButton = findViewById(R.id.flashButton)
-        backButton = findViewById(R.id.backButton)
-
-        barNetwork = BarNetwork(this)
-
-        findViewById<Button>(R.id.settingsButton).setOnClickListener { showSettings() }
-        findViewById<Button>(R.id.logButton).setOnClickListener { showLog() }
-        findViewById<Button>(R.id.folderButton).setOnClickListener { pickFolder.launch(null) }
-
-        searchButton.setOnClickListener { connect() }
-        pingButton.setOnClickListener { runPing() }
-        hmiButton.setOnClickListener { choose("hmi") }
-        addonButton.setOnClickListener { choose("fizzz") }
-        rcButton.setOnClickListener { choose("rc") }
-        flashButton.setOnClickListener { flash() }
-        backButton.setOnClickListener { goTo(step - 1) }
-
-        goTo(1)
-        restoreFolder()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        // Only give the network back when the app is really closing. A rotation
-        // or any other config change must not tear down a live link.
-        if (isFinishing) barNetwork.release()
-    }
-
-    // STEP NAVIGATION
-    private fun goTo(target: Int) {
-        step = target.coerceIn(1, 3)
-        step1.visibility = if (step == 1) View.VISIBLE else View.GONE
-        step2.visibility = if (step == 2) View.VISIBLE else View.GONE
-        step3.visibility = if (step == 3) View.VISIBLE else View.GONE
-        backButton.visibility = if (step == 1) View.GONE else View.VISIBLE
-
-        val done = resources.getColor(R.color.action_green, theme)
-        val idle = resources.getColor(R.color.step_idle, theme)
-        bar1.setBackgroundColor(if (step >= 1) done else idle)
-        bar2.setBackgroundColor(if (step >= 2) done else idle)
-        bar3.setBackgroundColor(if (step >= 3) done else idle)
-
-        stepCounter.text = "Step $step of 3"
-        when (step) {
-            1 -> {
-                stepTitle.text = "Connect to the bar"
-                stepHint.text = "Pick the device in the system dialog."
-            }
-            2 -> {
-                stepTitle.text = "Choose firmware"
-                stepHint.text = describeAll()
-            }
-            3 -> {
-                stepTitle.text = "Flash firmware"
-                stepHint.text = ""
+    override fun writeTo(sink: BufferedSink) {
+        var written = 0
+        var lastPercent = -1
+        while (written < data.size) {
+            val n = minOf(CHUNK, data.size - written)
+            sink.write(data, written, n)
+            sink.flush()          // push it out now, not at the end
+            written += n
+            val percent = written * 100 / data.size
+            if (percent != lastPercent) {
+                lastPercent = percent
+                onProgress(percent)
             }
         }
     }
 
-    // STEP 1
-    private fun connect() {
-        val ssid = prefs().getString("ssid", "").orEmpty().trim()
-        // Android rejects a match-all pattern, so a prefix is mandatory. Case matters.
-        if (ssid.isEmpty()) {
-            stepHint.text = "Open Setup and enter a name prefix, e.g. Water"
-            return
-        }
+    private companion object { const val CHUNK = 8 * 1024 }
+}
 
-        searchButton.isEnabled = false
-        lifecycleScope.launch {
-            try {
-                stepHint.text = "Searching for \"$ssid*\" - pick the bar in the dialog"
-                log("Searching for \"$ssid*\" ...")
-                barNetwork.connect(ssid, prefs().getString("pass", ""))
-                log("Joined - sockets are pinned to the bar")
-                stepHint.text = "Connected. Check the link before flashing."
-                pingButton.isEnabled = true
-            } catch (e: Exception) {
-                log("Connect failed: ${e.message}")
-                stepHint.text = "Not connected: ${e.message}"
-            } finally {
-                searchButton.isEnabled = true
+/**
+ * Port of the upload flow from wifi_ota_gui.py.
+ *
+ *   POST http://192.168.4.1/ota/upload
+ *        ?version=<ver>&sha256=<sha>&component=<hmi|fizzz>&transactionComplete=true
+ *   Content-Type: application/octet-stream, body = the raw .bin (not multipart).
+ */
+class OtaClient(network: Network, private val host: String) {
+
+    private val client = OkHttpClient.Builder()
+        // Sockets are created on the bar's network, not the phone's default route.
+        .socketFactory(network.socketFactory)
+        .connectTimeout(CONNECT_TIMEOUT_SEC, TimeUnit.SECONDS)
+        .readTimeout(UPLOAD_TIMEOUT_SEC, TimeUnit.SECONDS)
+        .writeTimeout(UPLOAD_TIMEOUT_SEC, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(false)
+        .build()
+
+    fun ping(): Pair<Boolean, String> = try {
+        client.newCall(Request.Builder().url("http://$host$INFO_PATH").build())
+            .execute().use { r ->
+                val body = r.body?.string()?.trim().orEmpty()
+                true to "HTTP ${r.code}: ${body.ifEmpty { "(empty)" }}"
             }
+    } catch (e: Exception) {
+        false to (e.message ?: e.toString())
+    }
+
+    fun prepareFota(): Pair<Boolean, String> = try {
+        client.newCall(Request.Builder().url("http://$host$PREPARE_PATH").build())
+            .execute().use { r -> true to "HTTP ${r.code}" }
+    } catch (e: Exception) {
+        false to (e.message ?: e.toString())
+    }
+
+    private data class Attempt(
+        val code: Int?,
+        val body: String,
+        val accepted: Boolean,
+        val fullySent: Boolean
+    )
+
+    private fun uploadOnce(
+        bytes: ByteArray,
+        version: String,
+        sha: String,
+        component: String,
+        transactionComplete: Boolean,
+        onProgress: (Int) -> Unit
+    ): Attempt {
+        val url = HttpUrl.Builder()
+            .scheme("http").host(host).encodedPath(UPLOAD_PATH)
+            .addQueryParameter("version", version)
+            .addQueryParameter("sha256", sha)
+            .apply {
+                if (component.isNotEmpty()) addQueryParameter("component", component)
+                if (transactionComplete) addQueryParameter("transactionComplete", "true")
+            }
+            .build()
+
+        var sentAll = false
+        val body = ProgressBody(bytes) { percent ->
+            if (percent >= 100) sentAll = true
+            onProgress(percent)
+        }
+
+        return try {
+            client.newCall(Request.Builder().url(url).post(body).build()).execute().use { r ->
+                val text = r.body?.string()?.trim().orEmpty()
+                Attempt(r.code, text, text.lowercase().contains(SUCCESS_TEXT), sentAll)
+            }
+        } catch (e: Exception) {
+            Attempt(null, e.message ?: e.toString(), false, sentAll)
         }
     }
 
-    private fun runPing() {
-        val net = barNetwork.network ?: run { stepHint.text = "Link lost - search again"; return }
-        val host = prefs().getString("ip", DEFAULT_IP).orEmpty()
-        pingButton.isEnabled = false
-        lifecycleScope.launch {
-            stepHint.text = "Pinging $host ..."
-            val (ok, detail) = withContext(Dispatchers.IO) { OtaClient(net, host).ping() }
-            log(if (ok) "Bar reachable: $detail" else "No link: $detail")
-            pingButton.isEnabled = true
-            if (ok) goTo(2) else stepHint.text = "Bar did not answer: $detail"
-        }
-    }
+    suspend fun upload(
+        bytes: ByteArray,
+        version: String,
+        sha: String,
+        component: String,
+        transactionComplete: Boolean,
+        autoRetry: Boolean,
+        onProgress: (Int) -> Unit,
+        onWait: (Int) -> Unit,
+        log: (String) -> Unit
+    ): UploadOutcome {
+        val attempts = if (autoRetry) RETRY_ON_500 + 1 else 1
+        log("Sending ${bytes.size / 1024} KB  component=${component.ifEmpty { "(none)" }} version=$version")
 
-    // STEP 2
-    private fun choose(which: String) {
-        component = which
-        val file = fileFor(which) ?: return
-        val name = file.name ?: ""
-        val version = Firmware.versionFromName(name, which).ifEmpty { "?" }
-        summary.text = "$name\nversion $version\ncomponent $which"
-        uploadBar.visibility = View.INVISIBLE
-        uploadBar.progress = 0
-        progressText.text = ""
-        goTo(3)
-    }
+        for (i in 1..attempts) {
+            log("Attempt $i/$attempts...")
+            onProgress(0)
+            val a = uploadOnce(bytes, version, sha, component, transactionComplete, onProgress)
 
-    private fun fileFor(which: String) = when (which) {
-        "hmi" -> firmware.hmi
-        "fizzz" -> firmware.addon
-        else -> firmware.rc
-    }
-
-    private fun onFolderPicked(uri: Uri) {
-        // Persist access so the folder survives an app restart.
-        runCatching {
-            contentResolver.takePersistableUriPermission(
-                uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
-            )
-        }
-        prefs().edit().putString("folder", uri.toString()).apply()
-        scanFolder(uri)
-    }
-
-    private fun restoreFolder() {
-        prefs().getString("folder", null)?.let { scanFolder(Uri.parse(it)) }
-    }
-
-    private fun scanFolder(uri: Uri) {
-        val root = DocumentFile.fromTreeUri(this, uri) ?: return
-        lifecycleScope.launch {
-            firmware = withContext(Dispatchers.IO) { Firmware.scan(root) }
-            hmiButton.isEnabled = firmware.hmi != null
-            addonButton.isEnabled = firmware.addon != null
-            rcButton.isEnabled = firmware.rc != null
-            hmiButton.text = label("HMI", firmware.hmi, "hmi")
-            addonButton.text = label("ADDON", firmware.addon, "fizzz")
-            rcButton.text = label("RC", firmware.rc, "rc")
-            if (step == 2) stepHint.text = describeAll()
-            log("Folder scanned: ${root.name}")
-        }
-    }
-
-    private fun label(title: String, file: DocumentFile?, which: String): String {
-        val name = file?.name ?: return "$title - none found"
-        val v = Firmware.versionFromName(name, which).ifEmpty { "?" }
-        return "$title  v$v"
-    }
-
-    private fun describeAll(): String =
-        if (firmware.hmi == null && firmware.addon == null && firmware.rc == null)
-            "No .bin files yet - choose the folder."
-        else "Pick what to flash."
-
-    // STEP 3
-    private fun flash() {
-        val net = barNetwork.network
-            ?: run { progressText.text = "Link lost - go back and search"; return }
-        val host = prefs().getString("ip", DEFAULT_IP).orEmpty()
-        val file = fileFor(component) ?: return
-
-        flashButton.isEnabled = false
-        backButton.isEnabled = false
-        // The upload takes minutes; a sleeping screen can drop the Wi-Fi link.
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-
-        lifecycleScope.launch {
-            try {
-                val name = file.name ?: "firmware.bin"
-                progressText.text = "Reading and hashing $name"
-                val (bytes, sha) = withContext(Dispatchers.IO) {
-                    Firmware.readAndHash(this@MainActivity, file)
-                }
-                log("$name  sha256 = $sha")
-
-                val client = OtaClient(net, host)
-                val (reachable, detail) = withContext(Dispatchers.IO) { client.ping() }
-                if (!reachable) {
-                    progressText.text = "Bar not reachable"
-                    log("[ERROR] Bar not reachable: $detail")
-                    return@launch
+            when {
+                a.accepted -> {
+                    log("HTTP ${a.code}: ${a.body}")
+                    return UploadOutcome.CONFIRMED
                 }
 
-                // RC follows the official flow: fota_prepare first, then upload
-                // with NO component and NO transactionComplete.
-                val isRc = component == "rc"
-                if (isRc) {
-                    val (_, pd) = withContext(Dispatchers.IO) { client.prepareFota() }
-                    log("fota_prepare: $pd")
+                // The whole image left the phone and only then the link died.
+                // The bar has the file and is writing it - retrying would only
+                // hammer a device that is already busy, or a dead AP.
+                a.code == null && a.fullySent -> {
+                    log("All bytes sent, then the link closed (${a.body}). " +
+                        "The bar has the image and is writing it.")
+                    return UploadOutcome.DELIVERED_UNCONFIRMED
                 }
 
-                val version = Firmware.versionFromName(name, component)
-                val tc = if (isRc) false else prefs().getBoolean("tc", true)
-                val retry = prefs().getBoolean("retry", true)
-                val sizeKb = bytes.size / 1024
-
-                uploadBar.visibility = View.VISIBLE
-                uploadBar.progress = 0
-
-                val ok = withContext(Dispatchers.IO) {
-                    client.upload(
-                        bytes = bytes,
-                        version = version,
-                        sha = sha,
-                        component = if (isRc) "" else component,
-                        transactionComplete = tc,
-                        autoRetry = retry,
-                        onProgress = { percent ->
-                            lifecycleScope.launch {
-                                // Bytes handed to the socket - the kernel buffers,
-                                // so this is always slightly ahead of the bar.
-                                // Cap at 99: only the bar's reply proves receipt.
-                                uploadBar.progress = minOf(percent, 99)
-                                progressText.text = "Sending $percent% of $sizeKb KB"
-                            }
-                        },
-                        onWait = { left ->
-                            lifecycleScope.launch {
-                                progressText.text = if (left > 0)
-                                    "Bar busy - retrying in ${left}s" else "Retrying now"
-                            }
-                        }
-                    ) { line -> lifecycleScope.launch { log(line) } }
+                // 500 is not a broken request: the MSA is busy, the bar is not
+                // ready. Wait and repeat with the request untouched.
+                a.code == 500 && i < attempts -> {
+                    log("HTTP 500: ${a.body} - bar busy/MSA down")
+                    countdown(onWait)
                 }
 
-                if (ok) {
-                    // The bar answered "uploaded successfully" - transfer is over.
-                    uploadBar.progress = 100
-                    progressText.text = when (component) {
-                        "hmi" -> "Transferred. The bar reboots now - connect again."
-                        "fizzz" -> "Transferred. HMI is pushing it to the STM32 (1-2 min). " +
-                            "Do not cut power. Check 'ver' on HC."
-                        else -> "Transferred."
-                    }
-                    log("Upload accepted: $name")
-                    kotlinx.coroutines.delay(1500)
-                    // Flashing HMI drops the AP, so that one has to start over.
-                    goTo(if (component == "hmi") 1 else 2)
-                } else {
-                    progressText.text = "Failed - open Log for details"
+                a.code == null && i < attempts -> {
+                    log("Connection failed before the file was sent (${a.body})")
+                    countdown(onWait)
                 }
-            } catch (e: Exception) {
-                progressText.text = "Error: ${e.message}"
-                log("Error: ${e.message}")
-            } finally {
-                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                flashButton.isEnabled = true
-                backButton.isEnabled = true
+
+                a.code == 400 -> {
+                    log("HTTP 400: ${a.body} - wrong component/params.")
+                    return UploadOutcome.FAILED
+                }
+
+                else -> {
+                    log("HTTP ${a.code}: ${a.body}")
+                    return UploadOutcome.FAILED
+                }
             }
         }
+
+        log("All attempts failed. Check the addon (HC) is connected and MSA shows 'connected'.")
+        return UploadOutcome.FAILED
     }
 
-    // DIALOGS
-    private fun showSettings() {
-        val view = layoutInflater.inflate(R.layout.dialog_settings, null)
-        val ssid = view.findViewById<EditText>(R.id.ssidField)
-        val pass = view.findViewById<EditText>(R.id.passField)
-        val ip = view.findViewById<EditText>(R.id.ipField)
-        val showPass = view.findViewById<CheckBox>(R.id.showPass)
-        val tc = view.findViewById<CheckBox>(R.id.tcCheck)
-        val retry = view.findViewById<CheckBox>(R.id.retryCheck)
-
-        with(prefs()) {
-            ssid.setText(getString("ssid", ""))
-            pass.setText(getString("pass", ""))
-            ip.setText(getString("ip", DEFAULT_IP))
-            tc.isChecked = getBoolean("tc", true)
-            retry.isChecked = getBoolean("retry", true)
+    /** Exact 8 s wait, reported second by second - this one is not a guess. */
+    private suspend fun countdown(onWait: (Int) -> Unit) {
+        for (left in RETRY_WAIT_SEC downTo 1) {
+            onWait(left)
+            delay(1000)
         }
-
-        showPass.setOnCheckedChangeListener { _, checked ->
-            pass.inputType = if (checked)
-                android.text.InputType.TYPE_CLASS_TEXT or
-                    android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-            else
-                android.text.InputType.TYPE_CLASS_TEXT or
-                    android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-            // Changing inputType resets the caret - put it back at the end.
-            pass.setSelection(pass.text.length)
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle("Setup")
-            .setView(view)
-            .setPositiveButton("Save") { _, _ ->
-                prefs().edit()
-                    .putString("ssid", ssid.text.toString().trim())
-                    .putString("pass", pass.text.toString())
-                    .putString("ip", ip.text.toString().trim())
-                    .putBoolean("tc", tc.isChecked)
-                    .putBoolean("retry", retry.isChecked)
-                    .apply()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
+        onWait(0)
     }
 
-    private fun showLog() {
-        val text = TextView(this).apply {
-            setPadding(40, 30, 40, 30)
-            textSize = 12f
-            typeface = Typeface.MONOSPACE
-            text = if (logLines.isEmpty()) "Empty" else logLines.toString()
-        }
-        val scroll = ScrollView(this).apply { addView(text) }
-        AlertDialog.Builder(this)
-            .setTitle("Log")
-            .setView(scroll)
-            .setPositiveButton("Close", null)
-            .setNeutralButton("Clear") { _, _ -> logLines.clear() }
-            .show()
-    }
+    companion object {
+        const val INFO_PATH = "/ap?tk=tk&command=get_info"
+        const val PREPARE_PATH = "/ap?tk=tk&command=fota_prepare"
+        const val UPLOAD_PATH = "/ota/upload"
+        const val SUCCESS_TEXT = "uploaded successfully"
 
-    private fun log(line: String) {
-        val ts = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())
-        logLines.append("[$ts]  ").append(line).append('\n')
-    }
-
-    private fun prefs() = getSharedPreferences("wifi_ota", Context.MODE_PRIVATE)
-
-    private companion object {
-        const val DEFAULT_IP = "192.168.4.1"
+        const val CONNECT_TIMEOUT_SEC = 5L
+        const val UPLOAD_TIMEOUT_SEC = 300L
+        const val RETRY_ON_500 = 4
+        const val RETRY_WAIT_SEC = 8
     }
 }
