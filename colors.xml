@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="icon_background">#185FA5</color>
+
+    <!-- Sparkling water: pale aqua with a hint of green. -->
+    <color name="app_background">#DFF2F1</color>
+    <color name="card_background">#F2FAFA</color>
+
+    <!-- Primary actions (do the thing) are green, helpers are blue. -->
+    <color name="action_green">#1F9254</color>
+    <color name="helper_blue">#185FA5</color>
+    <color name="step_idle">#9FC6C4</color>
+</resources>
