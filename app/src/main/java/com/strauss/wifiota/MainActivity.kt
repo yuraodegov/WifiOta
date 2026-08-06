@@ -3,7 +3,6 @@ package com.strauss.wifiota
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
@@ -111,7 +110,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        barNetwork.release()
+        // Only give the network back when the app is really closing. A rotation
+        // or any other config change must not tear down a live link.
+        if (isFinishing) barNetwork.release()
     }
 
     // STEP NAVIGATION
@@ -122,9 +123,8 @@ class MainActivity : AppCompatActivity() {
         step3.visibility = if (step == 3) View.VISIBLE else View.GONE
         backButton.visibility = if (step == 1) View.GONE else View.VISIBLE
 
-        val done = resources.getColor(R.color.icon_background, theme)
-        // Half-transparent gray works on both light and dark backgrounds.
-        val idle = Color.parseColor("#40808080")
+        val done = resources.getColor(R.color.action_green, theme)
+        val idle = resources.getColor(R.color.step_idle, theme)
         bar1.setBackgroundColor(if (step >= 1) done else idle)
         bar2.setBackgroundColor(if (step >= 2) done else idle)
         bar3.setBackgroundColor(if (step >= 3) done else idle)
@@ -301,9 +301,11 @@ class MainActivity : AppCompatActivity() {
                         autoRetry = retry,
                         onProgress = { percent ->
                             lifecycleScope.launch {
-                                // Real figure: bytes actually handed to the socket.
-                                uploadBar.progress = percent
-                                progressText.text = "Uploading $percent% of $sizeKb KB"
+                                // Bytes handed to the socket - the kernel buffers,
+                                // so this is always slightly ahead of the bar.
+                                // Cap at 99: only the bar's reply proves receipt.
+                                uploadBar.progress = minOf(percent, 99)
+                                progressText.text = "Sending $percent% of $sizeKb KB"
                             }
                         },
                         onWait = { left ->
@@ -316,14 +318,18 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 if (ok) {
+                    // The bar answered "uploaded successfully" - transfer is over.
                     uploadBar.progress = 100
                     progressText.text = when (component) {
-                        "hmi" -> "Accepted. The bar reboots now - search again afterwards."
-                        "fizzz" -> "Accepted. HMI is pushing it to the STM32 (1-2 min). " +
+                        "hmi" -> "Transferred. The bar reboots now - connect again."
+                        "fizzz" -> "Transferred. HMI is pushing it to the STM32 (1-2 min). " +
                             "Do not cut power. Check 'ver' on HC."
-                        else -> "Accepted."
+                        else -> "Transferred."
                     }
                     log("Upload accepted: $name")
+                    kotlinx.coroutines.delay(1500)
+                    // Flashing HMI drops the AP, so that one has to start over.
+                    goTo(if (component == "hmi") 1 else 2)
                 } else {
                     progressText.text = "Failed - open Log for details"
                 }
@@ -344,6 +350,7 @@ class MainActivity : AppCompatActivity() {
         val ssid = view.findViewById<EditText>(R.id.ssidField)
         val pass = view.findViewById<EditText>(R.id.passField)
         val ip = view.findViewById<EditText>(R.id.ipField)
+        val showPass = view.findViewById<CheckBox>(R.id.showPass)
         val tc = view.findViewById<CheckBox>(R.id.tcCheck)
         val retry = view.findViewById<CheckBox>(R.id.retryCheck)
 
@@ -353,6 +360,17 @@ class MainActivity : AppCompatActivity() {
             ip.setText(getString("ip", DEFAULT_IP))
             tc.isChecked = getBoolean("tc", true)
             retry.isChecked = getBoolean("retry", true)
+        }
+
+        showPass.setOnCheckedChangeListener { _, checked ->
+            pass.inputType = if (checked)
+                android.text.InputType.TYPE_CLASS_TEXT or
+                    android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+            else
+                android.text.InputType.TYPE_CLASS_TEXT or
+                    android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            // Changing inputType resets the caret - put it back at the end.
+            pass.setSelection(pass.text.length)
         }
 
         AlertDialog.Builder(this)
