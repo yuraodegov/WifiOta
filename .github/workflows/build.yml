@@ -28,7 +28,15 @@ jobs:
 
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon
-
+      - name: Inspect APK
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          ls -la $APK
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
+          echo "--- badging ---"
+          $BT/aapt2 dump badging $APK | head -20
+          echo "--- signatures ---"
+          $BT/apksigner verify --verbose --print-certs $APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
