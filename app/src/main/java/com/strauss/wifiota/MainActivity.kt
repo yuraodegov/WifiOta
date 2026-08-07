@@ -291,7 +291,7 @@ class MainActivity : AppCompatActivity() {
                 uploadBar.visibility = View.VISIBLE
                 uploadBar.progress = 0
 
-                val ok = withContext(Dispatchers.IO) {
+                val outcome = withContext(Dispatchers.IO) {
                     client.upload(
                         bytes = bytes,
                         version = version,
@@ -305,7 +305,9 @@ class MainActivity : AppCompatActivity() {
                                 // so this is always slightly ahead of the bar.
                                 // Cap at 99: only the bar's reply proves receipt.
                                 uploadBar.progress = minOf(percent, 99)
-                                progressText.text = "Sending $percent% of $sizeKb KB"
+                                progressText.text =
+                                    if (percent >= 100) "All $sizeKb KB sent - waiting for the bar"
+                                    else "Sending $percent% of $sizeKb KB"
                             }
                         },
                         onWait = { left ->
@@ -317,21 +319,26 @@ class MainActivity : AppCompatActivity() {
                     ) { line -> lifecycleScope.launch { log(line) } }
                 }
 
-                if (ok) {
-                    // The bar answered "uploaded successfully" - transfer is over.
-                    uploadBar.progress = 100
-                    progressText.text = when (component) {
-                        "hmi" -> "Transferred. The bar reboots now - connect again."
-                        "fizzz" -> "Transferred. HMI is pushing it to the STM32 (1-2 min). " +
-                            "Do not cut power. Check 'ver' on HC."
-                        else -> "Transferred."
+                when (outcome) {
+                    UploadOutcome.CONFIRMED, UploadOutcome.DELIVERED_UNCONFIRMED -> {
+                        uploadBar.progress = 100
+                        val confirmed = outcome == UploadOutcome.CONFIRMED
+                        progressText.text = when {
+                            component == "hmi" ->
+                                "File delivered. The bar is writing it (~1.5 min), " +
+                                    "then reboots. Wait, then connect again."
+                            component == "fizzz" ->
+                                "File delivered. HMI is pushing it to the STM32 (1-2 min). " +
+                                    "Do not cut power. Check 'ver' on HC."
+                            else -> "File delivered."
+                        }
+                        log(if (confirmed) "Bar confirmed: $name" else "Delivered without reply: $name")
+                        kotlinx.coroutines.delay(2500)
+                        // Flashing HMI drops the AP, so that one has to start over.
+                        goTo(if (component == "hmi") 1 else 2)
                     }
-                    log("Upload accepted: $name")
-                    kotlinx.coroutines.delay(1500)
-                    // Flashing HMI drops the AP, so that one has to start over.
-                    goTo(if (component == "hmi") 1 else 2)
-                } else {
-                    progressText.text = "Failed - open Log for details"
+                    UploadOutcome.FAILED ->
+                        progressText.text = "Failed - open Log for details"
                 }
             } catch (e: Exception) {
                 progressText.text = "Error: ${e.message}"
