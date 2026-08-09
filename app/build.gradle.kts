@@ -8,12 +8,14 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.strauss.wifiota"
+        // Deliberately different from namespace: Android treats this as a brand
+        // new app, so it cannot clash with the copy already on the phone.
+        applicationId = "com.strauss.wifiota.v2"
         // WifiNetworkSpecifier requires API 29. Nothing older can do this.
         minSdk = 29
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
     }
 
     buildTypes {
