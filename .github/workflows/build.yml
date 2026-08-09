@@ -31,15 +31,36 @@ jobs:
       - name: Inspect APK
         run: |
           APK=app/build/outputs/apk/debug/app-debug.apk
-          ls -la $APK
           BT=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
-          echo "=== BADGING ==="
-          $BT/aapt2 dump badging $APK | head -25
-          echo "=== SIGNATURES ==="
-          $BT/apksigner verify --verbose --print-certs $APK
+
+          {
+            echo "=== FILE ==="
+            ls -la $APK
+            echo ""
+            echo "=== BUILD TOOLS ==="
+            echo "$BT"
+            echo ""
+            echo "=== BADGING ==="
+            $BT/aapt2 dump badging $APK | head -25
+            echo ""
+            echo "=== SIGNATURES ==="
+            $BT/apksigner verify --verbose --print-certs $APK
+          } > apk-report.txt 2>&1
+
+          # Show it in the run summary page so it needs no clicking around,
+          # and keep the file so it can be downloaded as an artifact.
+          cat apk-report.txt
+          {
+            echo '## APK report'
+            echo '```'
+            cat apk-report.txt
+            echo '```'
+          } >> $GITHUB_STEP_SUMMARY
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: wifi-ota-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            apk-report.txt
