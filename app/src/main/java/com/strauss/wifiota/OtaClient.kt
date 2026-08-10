@@ -26,7 +26,7 @@ enum class UploadOutcome {
  * Streams the firmware in small chunks so upload progress reflects the network.
  *
  * flush() after every chunk is what makes the figure honest: without it Okio
- * buffers the whole image in memory and the bar reports 100 % instantly while
+ * buffers the whole image in memory and the app reports 100 % instantly while
  * the device has barely started receiving.
  */
 private class ProgressBody(
@@ -81,6 +81,26 @@ class OtaClient(network: Network, private val host: String) {
             }
     } catch (e: Exception) {
         false to (e.message ?: e.toString())
+    }
+
+    /**
+     * Asks the bar a list of candidate URLs and returns whatever comes back.
+     *
+     * `ver` / `get_ver` are known to work over the serial terminal; whether the
+     * AP-mode web server exposes anything equivalent is unverified, so this
+     * probes instead of guessing. Run it once next to a device and read the log.
+     */
+    fun probe(paths: List<String>): List<String> = paths.map { path ->
+        try {
+            client.newCall(Request.Builder().url("http://$host$path").build())
+                .execute().use { r ->
+                    val body = r.body?.string()?.trim().orEmpty()
+                    val short = if (body.length > 300) body.take(300) + "..." else body
+                    "$path -> HTTP ${r.code}: ${short.ifEmpty { "(empty)" }}"
+                }
+        } catch (e: Exception) {
+            "$path -> FAILED: ${e.message}"
+        }
     }
 
     fun prepareFota(): Pair<Boolean, String> = try {
@@ -204,6 +224,21 @@ class OtaClient(network: Network, private val host: String) {
 
     companion object {
         const val INFO_PATH = "/ap?tk=tk&command=get_info"
+
+        /** Candidates for reading installed versions - to be narrowed down. */
+        val PROBE_PATHS = listOf(
+            "/ap?tk=tk&command=get_ver",
+            "/ap?tk=tk&command=ver",
+            "/ap?tk=tk&command=get_version",
+            "/ap?tk=tk&command=get_info",
+            "/ap?tk=tk&command=info",
+            "/ap?tk=tk&command=get_status",
+            "/ap?command=get_ver",
+            "/ver",
+            "/version",
+            "/info"
+        )
+
         const val PREPARE_PATH = "/ap?tk=tk&command=fota_prepare"
         const val UPLOAD_PATH = "/ota/upload"
         const val SUCCESS_TEXT = "uploaded successfully"
