@@ -129,7 +129,7 @@ class MainActivity : AppCompatActivity() {
         bar2.setBackgroundColor(if (step >= 2) done else idle)
         bar3.setBackgroundColor(if (step >= 3) done else idle)
 
-        stepCounter.text = "Step $step of 3"
+        stepCounter.text = "STEP $step OF 3"
         when (step) {
             1 -> {
                 stepTitle.text = "Connect to the bar"
@@ -179,8 +179,20 @@ class MainActivity : AppCompatActivity() {
         pingButton.isEnabled = false
         lifecycleScope.launch {
             stepHint.text = "Pinging $host ..."
-            val (ok, detail) = withContext(Dispatchers.IO) { OtaClient(net, host).ping() }
+            val client = OtaClient(net, host)
+            val (ok, detail) = withContext(Dispatchers.IO) { client.ping() }
             log(if (ok) "Bar reachable: $detail" else "No link: $detail")
+
+            if (ok) {
+                // One-off discovery: find out which URL, if any, reports the
+                // versions installed on the device. Results go to the Log.
+                stepHint.text = "Connected. Probing device info..."
+                val lines = withContext(Dispatchers.IO) { client.probe(OtaClient.PROBE_PATHS) }
+                log("--- probe results ---")
+                lines.forEach { log(it) }
+                log("--- end of probe ---")
+            }
+
             pingButton.isEnabled = true
             if (ok) goTo(2) else stepHint.text = "Bar did not answer: $detail"
         }
