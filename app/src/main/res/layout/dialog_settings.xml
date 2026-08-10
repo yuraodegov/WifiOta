@@ -10,14 +10,16 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Name prefix, e.g. Water"
-        android:inputType="text" />
+        android:inputType="text"
+        android:textColor="@color/text_primary" />
 
     <EditText
         android:id="@+id/passField"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Passphrase"
-        android:inputType="textPassword" />
+        android:inputType="textPassword"
+        android:textColor="@color/text_primary" />
 
     <CheckBox
         android:id="@+id/showPass"
@@ -30,7 +32,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Bar IP"
-        android:inputType="text" />
+        android:inputType="text"
+        android:textColor="@color/text_primary" />
 
     <CheckBox
         android:id="@+id/tcCheck"
