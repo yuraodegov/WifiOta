@@ -73,7 +73,7 @@ class BarNetwork(context: Context) {
             }
 
             attachCallback = cb
-            cm.requestNetwork(cb, timeoutMs)
+            cm.requestNetwork(request, cb, timeoutMs)
             cont.invokeOnCancellation { release() }
         }
 
@@ -119,7 +119,7 @@ class BarNetwork(context: Context) {
             }
 
             pickerCallback = cb
-            cm.requestNetwork(cb, CONNECT_TIMEOUT_MS)
+            cm.requestNetwork(request, cb, CONNECT_TIMEOUT_MS)
             cont.invokeOnCancellation { release() }
         }
 
