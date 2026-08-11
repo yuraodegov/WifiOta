@@ -147,17 +147,46 @@ class MainActivity : AppCompatActivity() {
     }
 
     // STEP 1
+    /**
+     * Two-stage connect, mirroring the prototype flow.
+     *
+     * First it tries to use the Wi-Fi the phone is already on: if the user has
+     * joined the bar from the system settings, no dialog appears at all and the
+     * bar is simply identified. Only if that fails does Android's picker come
+     * up, listing every AP matching the prefix so the right one can be chosen.
+     */
     private fun connect() {
         val ssid = prefs().getString("ssid", "").orEmpty().trim()
-        // Android rejects a match-all pattern, so a prefix is mandatory. Case matters.
-        if (ssid.isEmpty()) {
-            stepHint.text = "Open Setup and enter a name prefix, e.g. Water"
-            return
-        }
+        val host = prefs().getString("ip", DEFAULT_IP).orEmpty()
 
         searchButton.isEnabled = false
         lifecycleScope.launch {
             try {
+                stepHint.text = "Identifying device..."
+                log("Looking at the Wi-Fi the phone is already on...")
+
+                val existing = barNetwork.attachToCurrentWifi()
+                if (existing != null) {
+                    val (ok, detail) = withContext(Dispatchers.IO) {
+                        OtaClient(existing, host).ping()
+                    }
+                    if (ok) {
+                        log("Already on a bar: $detail")
+                        stepHint.text = "Connected. Check the link before flashing."
+                        pingButton.isEnabled = true
+                        return@launch
+                    }
+                    // Some other Wi-Fi without internet - not our device.
+                    log("Attached network did not answer ($detail), asking the user instead")
+                    barNetwork.releaseAttachment()
+                }
+
+                // Android rejects a match-all pattern, so a prefix is mandatory.
+                if (ssid.isEmpty()) {
+                    stepHint.text = "Open Setup and enter a name prefix, e.g. Water"
+                    return@launch
+                }
+
                 stepHint.text = "Searching for \"$ssid*\" - pick the bar in the dialog"
                 log("Searching for \"$ssid*\" ...")
                 barNetwork.connect(ssid, prefs().getString("pass", ""))
