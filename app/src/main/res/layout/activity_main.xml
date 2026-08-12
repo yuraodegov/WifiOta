@@ -14,19 +14,41 @@
         android:paddingTop="18dp"
         android:paddingBottom="28dp">
 
+        <!-- header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView
+            <ImageView
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/ic_drop" />
+
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:text=""
-                android:textColor="@color/text_primary"
-                android:textSize="16sp" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="WiFi OTA"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Firmware management for water bars"
+                    android:textColor="@color/text_muted"
+                    android:textSize="12sp" />
+            </LinearLayout>
 
             <Button
                 android:id="@+id/logButton"
@@ -53,10 +75,11 @@
                 android:textSize="13sp" />
         </LinearLayout>
 
+        <!-- step indicator -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="18dp"
             android:orientation="horizontal">
 
             <View
@@ -83,11 +106,17 @@
                 android:background="@drawable/bg_step" />
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/stepHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
         <TextView
             android:id="@+id/stepCounter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="20dp"
             android:letterSpacing="0.08"
             android:text="STEP 1 OF 3"
             android:textColor="@color/text_muted"
@@ -110,6 +139,8 @@
             android:text=""
             android:textColor="@color/text_secondary"
             android:textSize="13sp" />
+
+        </LinearLayout>
 
         <LinearLayout
             android:id="@+id/step1"
@@ -145,6 +176,8 @@
                 android:textColor="@color/text_muted"
                 android:textSize="13sp" />
 
+            <!-- Real source of firmware: the folder on this phone.
+                 The prototype showed "cloud sync"; that does not exist yet. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -220,20 +253,12 @@
                 android:layout_height="54dp"
                 android:layout_marginTop="28dp"
                 android:background="@drawable/bg_button_primary"
+                android:backgroundTint="@null"
+                android:stateListAnimator="@null"
                 android:text="Connect to Water Bar"
                 android:textColor="#FFFFFF"
                 android:textSize="16sp" />
 
-            <Button
-                android:id="@+id/pingButton"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_button_ghost"
-                android:enabled="false"
-                android:text="Check connection"
-                android:textColor="@color/text_primary"
-                android:textSize="15sp" />
         </LinearLayout>
 
         <LinearLayout
@@ -249,6 +274,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:background="@drawable/bg_button_ghost"
+                android:backgroundTint="@null"
+                android:stateListAnimator="@null"
                 android:text="Firmware folder"
                 android:textColor="@color/text_primary"
                 android:textSize="14sp" />
@@ -259,6 +286,8 @@
                 android:layout_height="56dp"
                 android:layout_marginTop="14dp"
                 android:background="@drawable/bg_button_primary"
+                android:backgroundTint="@null"
+                android:stateListAnimator="@null"
                 android:enabled="false"
                 android:text="HMI"
                 android:textAlignment="viewStart"
@@ -271,6 +300,8 @@
                 android:layout_height="56dp"
                 android:layout_marginTop="10dp"
                 android:background="@drawable/bg_button_primary"
+                android:backgroundTint="@null"
+                android:stateListAnimator="@null"
                 android:enabled="false"
                 android:text="ADDON"
                 android:textAlignment="viewStart"
@@ -283,6 +314,8 @@
                 android:layout_height="56dp"
                 android:layout_marginTop="10dp"
                 android:background="@drawable/bg_button_primary"
+                android:backgroundTint="@null"
+                android:stateListAnimator="@null"
                 android:enabled="false"
                 android:text="RC"
                 android:textAlignment="viewStart"
@@ -290,6 +323,7 @@
                 android:textSize="14sp" />
         </LinearLayout>
 
+        <!-- STEP 3 -->
         <LinearLayout
             android:id="@+id/step3"
             android:layout_width="match_parent"
@@ -357,6 +391,8 @@
                 android:layout_height="52dp"
                 android:layout_marginTop="16dp"
                 android:background="@drawable/bg_button_primary"
+                android:backgroundTint="@null"
+                android:stateListAnimator="@null"
                 android:text="Flash"
                 android:textColor="#FFFFFF"
                 android:textSize="15sp" />
