@@ -48,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var hmiButton: Button
     private lateinit var addonButton: Button
     private lateinit var rcButton: Button
+    private lateinit var folderStatus: TextView
     private lateinit var summary: TextView
     private lateinit var uploadBar: ProgressBar
     private lateinit var progressText: TextView
@@ -84,6 +85,7 @@ class MainActivity : AppCompatActivity() {
         hmiButton = findViewById(R.id.hmiButton)
         addonButton = findViewById(R.id.addonButton)
         rcButton = findViewById(R.id.rcButton)
+        folderStatus = findViewById(R.id.folderStatus)
         summary = findViewById(R.id.summary)
         uploadBar = findViewById(R.id.uploadBar)
         progressText = findViewById(R.id.progressText)
@@ -95,6 +97,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.settingsButton).setOnClickListener { showSettings() }
         findViewById<Button>(R.id.logButton).setOnClickListener { showLog() }
         findViewById<Button>(R.id.folderButton).setOnClickListener { pickFolder.launch(null) }
+        findViewById<TextView>(R.id.folderLink).setOnClickListener { pickFolder.launch(null) }
 
         searchButton.setOnClickListener { connect() }
         pingButton.setOnClickListener { runPing() }
@@ -272,6 +275,7 @@ class MainActivity : AppCompatActivity() {
             addonButton.text = label("ADDON", firmware.addon, "fizzz")
             rcButton.text = label("RC", firmware.rc, "rc")
             if (step == 2) stepHint.text = describeAll()
+            folderStatus.text = summariseFolder(root.name)
             log("Folder scanned: ${root.name}")
         }
     }
@@ -280,6 +284,17 @@ class MainActivity : AppCompatActivity() {
         val name = file?.name ?: return "$title - none found"
         val v = Firmware.versionFromName(name, which).ifEmpty { "?" }
         return "$title  v$v"
+    }
+
+    /** One line for the home screen: where firmware comes from and what is in it. */
+    private fun summariseFolder(name: String?): String {
+        val found = listOfNotNull(
+            firmware.hmi?.let { "HMI" },
+            firmware.addon?.let { "ADDON" },
+            firmware.rc?.let { "RC" }
+        )
+        return if (found.isEmpty()) "${name ?: "Folder"} - no .bin files found"
+        else "${name ?: "Folder"} - ${found.joinToString(", ")}"
     }
 
     private fun describeAll(): String =
