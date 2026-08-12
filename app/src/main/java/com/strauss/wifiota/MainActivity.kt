@@ -40,11 +40,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var stepCounter: TextView
     private lateinit var stepTitle: TextView
     private lateinit var stepHint: TextView
+    private lateinit var stepHeader: View
     private lateinit var step1: View
     private lateinit var step2: View
     private lateinit var step3: View
     private lateinit var searchButton: Button
-    private lateinit var pingButton: Button
     private lateinit var hmiButton: Button
     private lateinit var addonButton: Button
     private lateinit var rcButton: Button
@@ -77,11 +77,11 @@ class MainActivity : AppCompatActivity() {
         stepCounter = findViewById(R.id.stepCounter)
         stepTitle = findViewById(R.id.stepTitle)
         stepHint = findViewById(R.id.stepHint)
+        stepHeader = findViewById(R.id.stepHeader)
         step1 = findViewById(R.id.step1)
         step2 = findViewById(R.id.step2)
         step3 = findViewById(R.id.step3)
         searchButton = findViewById(R.id.searchButton)
-        pingButton = findViewById(R.id.pingButton)
         hmiButton = findViewById(R.id.hmiButton)
         addonButton = findViewById(R.id.addonButton)
         rcButton = findViewById(R.id.rcButton)
@@ -100,7 +100,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.folderLink).setOnClickListener { pickFolder.launch(null) }
 
         searchButton.setOnClickListener { connect() }
-        pingButton.setOnClickListener { runPing() }
         hmiButton.setOnClickListener { choose("hmi") }
         addonButton.setOnClickListener { choose("fizzz") }
         rcButton.setOnClickListener { choose("rc") }
@@ -125,6 +124,8 @@ class MainActivity : AppCompatActivity() {
         step2.visibility = if (step == 2) View.VISIBLE else View.GONE
         step3.visibility = if (step == 3) View.VISIBLE else View.GONE
         backButton.visibility = if (step == 1) View.GONE else View.VISIBLE
+        // The home screen is a landing page, not a wizard step.
+        stepHeader.visibility = if (step == 1) View.GONE else View.VISIBLE
 
         val done = resources.getColor(R.color.action_green, theme)
         val idle = resources.getColor(R.color.step_idle, theme)
@@ -151,36 +152,28 @@ class MainActivity : AppCompatActivity() {
 
     // STEP 1
     /**
-     * Two-stage connect, mirroring the prototype flow.
+     * One button does the whole thing: attach, verify, move on.
      *
-     * First it tries to use the Wi-Fi the phone is already on: if the user has
-     * joined the bar from the system settings, no dialog appears at all and the
-     * bar is simply identified. Only if that fails does Android's picker come
-     * up, listing every AP matching the prefix so the right one can be chosen.
+     * It first tries the Wi-Fi the phone is already on - if the user joined the
+     * bar from system settings there is no dialog at all. Otherwise Android's
+     * picker lists every AP matching the prefix. Either way the link is proven
+     * with a ping before the app claims to be connected.
      */
     private fun connect() {
         val ssid = prefs().getString("ssid", "").orEmpty().trim()
         val host = prefs().getString("ip", DEFAULT_IP).orEmpty()
 
         searchButton.isEnabled = false
+        searchButton.text = "Identifying device..."
+
         lifecycleScope.launch {
             try {
-                stepHint.text = "Identifying device..."
                 log("Looking at the Wi-Fi the phone is already on...")
-
                 val existing = barNetwork.attachToCurrentWifi()
+                if (existing != null && verify(existing, host)) return@launch
+
                 if (existing != null) {
-                    val (ok, detail) = withContext(Dispatchers.IO) {
-                        OtaClient(existing, host).ping()
-                    }
-                    if (ok) {
-                        log("Already on a bar: $detail")
-                        stepHint.text = "Connected. Check the link before flashing."
-                        pingButton.isEnabled = true
-                        return@launch
-                    }
                     // Some other Wi-Fi without internet - not our device.
-                    log("Attached network did not answer ($detail), asking the user instead")
                     barNetwork.releaseAttachment()
                 }
 
@@ -190,44 +183,38 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
 
-                stepHint.text = "Searching for \"$ssid*\" - pick the bar in the dialog"
+                searchButton.text = "Scanning for water bar..."
                 log("Searching for \"$ssid*\" ...")
-                barNetwork.connect(ssid, prefs().getString("pass", ""))
+                val picked = barNetwork.connect(ssid, prefs().getString("pass", ""))
                 log("Joined - sockets are pinned to the bar")
-                stepHint.text = "Connected. Check the link before flashing."
-                pingButton.isEnabled = true
+                if (!verify(picked, host)) {
+                    stepHint.text = "Joined, but the bar did not answer on $host"
+                }
             } catch (e: Exception) {
                 log("Connect failed: ${e.message}")
                 stepHint.text = "Not connected: ${e.message}"
             } finally {
                 searchButton.isEnabled = true
+                searchButton.text = "Connect to Water Bar"
             }
         }
     }
 
-    private fun runPing() {
-        val net = barNetwork.network ?: run { stepHint.text = "Link lost - search again"; return }
-        val host = prefs().getString("ip", DEFAULT_IP).orEmpty()
-        pingButton.isEnabled = false
-        lifecycleScope.launch {
-            stepHint.text = "Pinging $host ..."
-            val client = OtaClient(net, host)
-            val (ok, detail) = withContext(Dispatchers.IO) { client.ping() }
-            log(if (ok) "Bar reachable: $detail" else "No link: $detail")
+    /** Pings the bar and, if it answers, moves straight on to firmware. */
+    private suspend fun verify(net: android.net.Network, host: String): Boolean {
+        val client = OtaClient(net, host)
+        val (ok, detail) = withContext(Dispatchers.IO) { client.ping() }
+        log(if (ok) "Bar reachable: $detail" else "No answer: $detail")
+        if (!ok) return false
 
-            if (ok) {
-                // One-off discovery: find out which URL, if any, reports the
-                // versions installed on the device. Results go to the Log.
-                stepHint.text = "Connected. Probing device info..."
-                val lines = withContext(Dispatchers.IO) { client.probe(OtaClient.PROBE_PATHS) }
-                log("--- probe results ---")
-                lines.forEach { log(it) }
-                log("--- end of probe ---")
-            }
+        // One-off discovery: which URL, if any, reports installed versions.
+        val lines = withContext(Dispatchers.IO) { client.probe(OtaClient.PROBE_PATHS) }
+        log("--- probe results ---")
+        lines.forEach { log(it) }
+        log("--- end of probe ---")
 
-            pingButton.isEnabled = true
-            if (ok) goTo(2) else stepHint.text = "Bar did not answer: $detail"
-        }
+        goTo(2)
+        return true
     }
 
     // STEP 2
