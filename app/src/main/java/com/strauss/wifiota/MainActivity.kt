@@ -126,6 +126,9 @@ class MainActivity : AppCompatActivity() {
         backButton.visibility = if (step == 1) View.GONE else View.VISIBLE
         // The home screen is a landing page, not a wizard step.
         stepHeader.visibility = if (step == 1) View.GONE else View.VISIBLE
+        // The bottom bar shows exactly one action, whichever the step needs.
+        searchButton.visibility = if (step == 1) View.VISIBLE else View.GONE
+        flashButton.visibility = if (step == 3) View.VISIBLE else View.GONE
 
         val done = resources.getColor(R.color.action_green, theme)
         val idle = resources.getColor(R.color.step_idle, theme)
