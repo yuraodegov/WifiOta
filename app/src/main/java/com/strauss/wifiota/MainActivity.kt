@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
+import android.net.wifi.WifiManager
+import android.provider.Settings
 import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
@@ -59,6 +61,8 @@ class MainActivity : AppCompatActivity() {
     private var firmware = Firmware.Set()
     private var component = "hmi"
     private var step = 1
+    private var wifiOn = true
+    private var deviceInfo: DeviceInfo? = null
 
     /** Kept in memory, shown on demand - the log is for diagnosis, not decoration. */
     private val logLines = StringBuilder()
@@ -110,6 +114,22 @@ class MainActivity : AppCompatActivity() {
         restoreFolder()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // The user may have toggled Wi-Fi in the notification shade while away.
+        refreshWifiState()
+    }
+
+    /** Without Wi-Fi there is nothing to connect to, so say that plainly. */
+    private fun refreshWifiState() {
+        val wifi = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        wifiOn = wifi.isWifiEnabled
+        if (step == 1) {
+            searchButton.text =
+                if (wifiOn) "Connect to Water Bar" else "Please activate WiFi"
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         // Only give the network back when the app is really closing. A rotation
@@ -123,12 +143,13 @@ class MainActivity : AppCompatActivity() {
         step1.visibility = if (step == 1) View.VISIBLE else View.GONE
         step2.visibility = if (step == 2) View.VISIBLE else View.GONE
         step3.visibility = if (step == 3) View.VISIBLE else View.GONE
-        backButton.visibility = if (step == 1) View.GONE else View.VISIBLE
+        backButton.visibility = if (step == 2) View.VISIBLE else View.GONE
         // The home screen is a landing page, not a wizard step.
         stepHeader.visibility = if (step == 1) View.GONE else View.VISIBLE
         // The bottom bar shows exactly one action, whichever the step needs.
         searchButton.visibility = if (step == 1) View.VISIBLE else View.GONE
-        flashButton.visibility = if (step == 3) View.VISIBLE else View.GONE
+        // Step 3 runs on its own - no Flash button, and no way back mid-write.
+        flashButton.visibility = View.GONE
 
         val done = resources.getColor(R.color.action_green, theme)
         val idle = resources.getColor(R.color.step_idle, theme)
@@ -144,7 +165,8 @@ class MainActivity : AppCompatActivity() {
             }
             2 -> {
                 stepTitle.text = "Choose firmware"
-                stepHint.text = describeAll()
+                stepHint.text = deviceInfo?.let { "Bar ${it.barType} - ${describeAll()}" }
+                    ?: describeAll()
             }
             3 -> {
                 stepTitle.text = "Flash firmware"
@@ -165,6 +187,12 @@ class MainActivity : AppCompatActivity() {
     private fun connect() {
         val ssid = prefs().getString("ssid", "").orEmpty().trim()
         val host = prefs().getString("ip", DEFAULT_IP).orEmpty()
+
+        if (!wifiOn) {
+            // Opens the Wi-Fi panel directly; onResume will re-check on return.
+            startActivity(Intent(Settings.Panel.ACTION_WIFI))
+            return
+        }
 
         searchButton.isEnabled = false
         searchButton.text = "Identifying device..."
@@ -198,24 +226,27 @@ class MainActivity : AppCompatActivity() {
                 stepHint.text = "Not connected: ${e.message}"
             } finally {
                 searchButton.isEnabled = true
-                searchButton.text = "Connect to Water Bar"
+                refreshWifiState()
             }
         }
     }
 
-    /** Pings the bar and, if it answers, moves straight on to firmware. */
+    /** Pings the bar, reads what it is running, then moves on to firmware. */
     private suspend fun verify(net: android.net.Network, host: String): Boolean {
         val client = OtaClient(net, host)
         val (ok, detail) = withContext(Dispatchers.IO) { client.ping() }
         log(if (ok) "Bar reachable: $detail" else "No answer: $detail")
         if (!ok) return false
 
-        // One-off discovery: which URL, if any, reports installed versions.
-        val lines = withContext(Dispatchers.IO) { client.probe(OtaClient.PROBE_PATHS) }
-        log("--- probe results ---")
-        lines.forEach { log(it) }
-        log("--- end of probe ---")
+        deviceInfo = withContext(Dispatchers.IO) { client.getInfo() }
+        deviceInfo?.let {
+            log("Bar ${it.barType}, HMI ${it.hmiVersion}")
+            it.plugins.forEach { p ->
+                log("  plugin ${p.type}: installed='${p.installed}' local='${p.local}' state=${p.state}")
+            }
+        } ?: log("Bar did not report its versions")
 
+        refreshFirmwareButtons()
         goTo(2)
         return true
     }
@@ -231,6 +262,8 @@ class MainActivity : AppCompatActivity() {
         uploadBar.progress = 0
         progressText.text = ""
         goTo(3)
+        // Picking a component IS the decision to flash it.
+        flash()
     }
 
     private fun fileFor(which: String) = when (which) {
@@ -258,23 +291,53 @@ class MainActivity : AppCompatActivity() {
         val root = DocumentFile.fromTreeUri(this, uri) ?: return
         lifecycleScope.launch {
             firmware = withContext(Dispatchers.IO) { Firmware.scan(root) }
-            hmiButton.isEnabled = firmware.hmi != null
-            addonButton.isEnabled = firmware.addon != null
-            rcButton.isEnabled = firmware.rc != null
-            hmiButton.text = label("HMI", firmware.hmi, "hmi")
-            addonButton.text = label("ADDON", firmware.addon, "fizzz")
-            rcButton.text = label("RC", firmware.rc, "rc")
+            refreshFirmwareButtons()
             if (step == 2) stepHint.text = describeAll()
             folderStatus.text = summariseFolder(root.name)
             log("Folder scanned: ${root.name}")
         }
     }
 
-    private fun label(title: String, file: DocumentFile?, which: String): String {
-        val name = file?.name ?: return "$title - none found"
-        val v = Firmware.versionFromName(name, which).ifEmpty { "?" }
-        return "$title  v$v"
+    /**
+     * Caption and enabled state for one component.
+     *
+     * A component is "up to date" only when the bar actually told us what it is
+     * running and that is not older than the file. When the bar stays silent -
+     * an unplugged addon reports an empty version - the button stays available
+     * rather than pretending to know.
+     */
+    private fun applyLabel(button: Button, title: String, file: DocumentFile?, which: String) {
+        val name = file?.name
+        if (name == null) {
+            button.text = "$title - none found"
+            button.isEnabled = false
+            return
+        }
+
+        val fileVer = Firmware.versionFromName(name, which).ifEmpty { "?" }
+        val installed = deviceInfo?.installedVersion(which)
+
+        if (installed == null) {
+            button.text = "$title  v$fileVer"
+            button.isEnabled = true
+            return
+        }
+
+        val upToDate = compareVersions(installed, fileVer) >= 0
+        button.text = if (upToDate)
+            "$title  v$installed  ✓ up to date"
+        else
+            "$title  v$installed → v$fileVer"
+        button.isEnabled = !upToDate
     }
+
+    private fun refreshFirmwareButtons() {
+        applyLabel(hmiButton, "HMI", firmware.hmi, "hmi")
+        applyLabel(addonButton, "ADDON", firmware.addon, "fizzz")
+        applyLabel(rcButton, "RC", firmware.rc, "rc")
+    }
+
+    private fun describeAll(): String =
 
     /** One line for the home screen: where firmware comes from and what is in it. */
     private fun summariseFolder(name: String?): String {
@@ -299,7 +362,6 @@ class MainActivity : AppCompatActivity() {
         val host = prefs().getString("ip", DEFAULT_IP).orEmpty()
         val file = fileFor(component) ?: return
 
-        flashButton.isEnabled = false
         backButton.isEnabled = false
         // The upload takes minutes; a sleeping screen can drop the Wi-Fi link.
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -379,19 +441,21 @@ class MainActivity : AppCompatActivity() {
                             else -> "File delivered."
                         }
                         log(if (confirmed) "Bar confirmed: $name" else "Delivered without reply: $name")
-                        kotlinx.coroutines.delay(2500)
-                        // Flashing HMI drops the AP, so that one has to start over.
-                        goTo(if (component == "hmi") 1 else 2)
+                        kotlinx.coroutines.delay(3000)
+                        // Back to the start: the AP is gone after a reboot anyway.
+                        goTo(1)
                     }
-                    UploadOutcome.FAILED ->
+                    UploadOutcome.FAILED -> {
                         progressText.text = "Failed - open Log for details"
+                        kotlinx.coroutines.delay(4000)
+                        goTo(2)
+                    }
                 }
             } catch (e: Exception) {
                 progressText.text = "Error: ${e.message}"
                 log("Error: ${e.message}")
             } finally {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                flashButton.isEnabled = true
                 backButton.isEnabled = true
             }
         }
