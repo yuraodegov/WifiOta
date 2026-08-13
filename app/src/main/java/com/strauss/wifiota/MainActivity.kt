@@ -337,8 +337,6 @@ class MainActivity : AppCompatActivity() {
         applyLabel(rcButton, "RC", firmware.rc, "rc")
     }
 
-    private fun describeAll(): String =
-
     /** One line for the home screen: where firmware comes from and what is in it. */
     private fun summariseFolder(name: String?): String {
         val found = listOfNotNull(
