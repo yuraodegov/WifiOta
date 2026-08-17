@@ -21,4 +21,5 @@
     <color name="accent">#12A8CE</color>
     <color name="warn">#E39A2B</color>
     <color name="ok">#2FB56B</color>
+    <color name="danger">#E8564A</color>
 </resources>

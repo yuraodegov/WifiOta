@@ -59,6 +59,21 @@ object Firmware {
     }
 
     /**
+     * Which component a hand-picked file belongs to, judged by its name.
+     * Returns null when the name gives no clue - better to refuse than to
+     * flash an image into the wrong component.
+     */
+    fun componentFromName(name: String): String? {
+        val n = name.lowercase()
+        return when {
+            n.startsWith("addon-fizz") || n.contains("fizz") -> "fizzz"
+            n.startsWith("rc") -> "rc"
+            n.contains("hmi") -> "hmi"
+            else -> null
+        }
+    }
+
+    /**
      * Pull the version out of a firmware filename.
      *
      *   element-p-hmi-0.03.130_enc.bin -> 0.03.130
@@ -73,11 +88,11 @@ object Firmware {
 
         return when (component) {
             "hmi" -> groups.firstOrNull {
-                        (it.startsWith("0.0") || it.startsWith("0.1") || it.startsWith("1.0")) &&
-                            !it.startsWith("00.")
-                     }
-                     ?: groups.firstOrNull { !it.startsWith("00.") }
-                     ?: groups.first()
+                (it.startsWith("0.0") || it.startsWith("0.1") || it.startsWith("1.0")) &&
+                        !it.startsWith("00.")
+            }
+                ?: groups.firstOrNull { !it.startsWith("00.") }
+                ?: groups.first()
 
             "rc" -> groups.first()
 

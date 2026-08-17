@@ -63,6 +63,8 @@ class MainActivity : AppCompatActivity() {
     private var step = 1
     private var wifiOn = true
     private var deviceInfo: DeviceInfo? = null
+    /** Set when the user picked a .bin by hand instead of using the scan. */
+    private var manualFile: DocumentFile? = null
 
     /** Kept in memory, shown on demand - the log is for diagnosis, not decoration. */
     private val logLines = StringBuilder()
@@ -70,6 +72,10 @@ class MainActivity : AppCompatActivity() {
     private val pickFolder = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri -> uri?.let { onFolderPicked(it) } }
+
+    private val pickSingleFile = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> uri?.let { onManualFilePicked(it) } }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,6 +113,10 @@ class MainActivity : AppCompatActivity() {
         hmiButton.setOnClickListener { choose("hmi") }
         addonButton.setOnClickListener { choose("fizzz") }
         rcButton.setOnClickListener { choose("rc") }
+        findViewById<Button>(R.id.manualButton).setOnClickListener {
+            // Firmware images have no registered MIME type.
+            pickSingleFile.launch(arrayOf("*/*"))
+        }
         flashButton.setOnClickListener { flash() }
         backButton.setOnClickListener { goTo(step - 1) }
 
@@ -253,6 +263,7 @@ class MainActivity : AppCompatActivity() {
 
     // STEP 2
     private fun choose(which: String) {
+        manualFile = null
         component = which
         val file = fileFor(which) ?: return
         val name = file.name ?: ""
@@ -266,10 +277,59 @@ class MainActivity : AppCompatActivity() {
         flash()
     }
 
-    private fun fileFor(which: String) = when (which) {
+    private fun fileFor(which: String): DocumentFile? = manualFile ?: when (which) {
         "hmi" -> firmware.hmi
         "fizzz" -> firmware.addon
         else -> firmware.rc
+    }
+
+    /**
+     * Hand-picked file: work out which component it is from the name, show what
+     * is about to happen - including a downgrade - and only then flash.
+     */
+    private fun onManualFilePicked(uri: Uri) {
+        val file = DocumentFile.fromSingleUri(this, uri) ?: return
+        val name = file.name ?: "firmware.bin"
+
+        if (!name.lowercase().endsWith(".bin")) {
+            stepHint.text = "Not a .bin file: $name"
+            return
+        }
+
+        val which = Firmware.componentFromName(name)
+        if (which == null) {
+            stepHint.text = "Cannot tell the component from \"$name\""
+            return
+        }
+
+        val fileVer = Firmware.versionFromName(name, which).ifEmpty { "?" }
+        val installed = deviceInfo?.installedVersion(which)
+        val older = installed != null && fileVer != "?" &&
+                compareVersions(fileVer, installed) < 0
+
+        val message = buildString {
+            append(name).append("\n\n")
+            append("component: ").append(which).append('\n')
+            append("file version: ").append(fileVer).append('\n')
+            append("on the bar: ").append(installed ?: "unknown").append('\n')
+            if (older) append("\nThis is OLDER than what is installed - a downgrade.")
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(if (older) "Downgrade?" else "Install this file?")
+            .setMessage(message)
+            .setPositiveButton(if (older) "Downgrade" else "Install") { _, _ ->
+                manualFile = file
+                component = which
+                summary.text = "$name\nversion $fileVer\ncomponent $which"
+                uploadBar.visibility = View.INVISIBLE
+                uploadBar.progress = 0
+                progressText.text = ""
+                goTo(3)
+                flash()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun onFolderPicked(uri: Uri) {
@@ -310,6 +370,7 @@ class MainActivity : AppCompatActivity() {
         val name = file?.name
         if (name == null) {
             button.text = "$title - none found"
+            button.setTextColor(resources.getColor(R.color.text_muted, theme))
             button.isEnabled = false
             return
         }
@@ -319,16 +380,21 @@ class MainActivity : AppCompatActivity() {
 
         if (installed == null) {
             button.text = "$title  v$fileVer"
+            button.setTextColor(0xFFFFFFFF.toInt())
             button.isEnabled = true
             return
         }
 
         val upToDate = compareVersions(installed, fileVer) >= 0
-        button.text = if (upToDate)
-            "$title  v$installed  ✓ up to date"
-        else
-            "$title  v$installed → v$fileVer"
-        button.isEnabled = !upToDate
+        if (upToDate) {
+            button.text = "$title  v$installed  ✓ up to date"
+            button.setTextColor(resources.getColor(R.color.ok, theme))
+            button.isEnabled = false
+        } else {
+            button.text = "$title  v$installed → v$fileVer"
+            button.setTextColor(0xFFFFFFFF.toInt())
+            button.isEnabled = true
+        }
     }
 
     private fun refreshFirmwareButtons() {
@@ -432,10 +498,10 @@ class MainActivity : AppCompatActivity() {
                         progressText.text = when {
                             component == "hmi" ->
                                 "File delivered. The bar is writing it (~1.5 min), " +
-                                    "then reboots. Wait, then connect again."
+                                        "then reboots. Wait, then connect again."
                             component == "fizzz" ->
                                 "File delivered. HMI is pushing it to the STM32 (1-2 min). " +
-                                    "Do not cut power. Check 'ver' on HC."
+                                        "Do not cut power. Check 'ver' on HC."
                             else -> "File delivered."
                         }
                         log(if (confirmed) "Bar confirmed: $name" else "Delivered without reply: $name")
@@ -480,10 +546,10 @@ class MainActivity : AppCompatActivity() {
         showPass.setOnCheckedChangeListener { _, checked ->
             pass.inputType = if (checked)
                 android.text.InputType.TYPE_CLASS_TEXT or
-                    android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                        android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
             else
                 android.text.InputType.TYPE_CLASS_TEXT or
-                    android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+                        android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
             // Changing inputType resets the caret - put it back at the end.
             pass.setSelection(pass.text.length)
         }

@@ -234,7 +234,7 @@
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <Button
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/folderButton"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
@@ -245,7 +245,7 @@
                     android:textColor="@color/text_primary"
                     android:textSize="14sp" />
 
-                <Button
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/hmiButton"
                     android:layout_width="match_parent"
                     android:layout_height="58dp"
@@ -258,7 +258,7 @@
                     android:textColor="#FFFFFF"
                     android:textSize="15sp" />
 
-                <Button
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/addonButton"
                     android:layout_width="match_parent"
                     android:layout_height="58dp"
@@ -271,7 +271,7 @@
                     android:textColor="#FFFFFF"
                     android:textSize="15sp" />
 
-                <Button
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/rcButton"
                     android:layout_width="match_parent"
                     android:layout_height="58dp"
@@ -283,6 +283,22 @@
                     android:text="RC"
                     android:textColor="#FFFFFF"
                     android:textSize="15sp" />
+
+                <!-- Escape hatch: pick any .bin by hand, including an older one.
+                     Red because going backwards is not a routine action. -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/manualButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="58dp"
+                    android:layout_marginTop="18dp"
+                    android:background="@drawable/bg_button_warn"
+                    android:backgroundTint="@null"
+                    android:stateListAnimator="@null"
+                    android:text="Force install / downgrade..."
+                    android:textAllCaps="false"
+                    android:textColor="@color/danger"
+                    android:textSize="15sp" />
+
             </LinearLayout>
 
             <!-- STEP 3 - flashing -->
@@ -383,7 +399,7 @@
             android:textSize="17sp"
             android:textStyle="bold" />
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/flashButton"
             android:layout_width="match_parent"
             android:layout_height="60dp"
