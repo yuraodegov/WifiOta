@@ -13,6 +13,8 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
@@ -65,6 +67,8 @@ class MainActivity : AppCompatActivity() {
     private var deviceInfo: DeviceInfo? = null
     /** Set when the user picked a .bin by hand instead of using the scan. */
     private var manualFile: DocumentFile? = null
+    /** Model resolved from the bar's own report, once it is connected. */
+    private var model: BarModel? = null
 
     /** Kept in memory, shown on demand - the log is for diagnosis, not decoration. */
     private val logLines = StringBuilder()
@@ -108,6 +112,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.logButton).setOnClickListener { showLog() }
         findViewById<Button>(R.id.folderButton).setOnClickListener { pickFolder.launch(null) }
         findViewById<TextView>(R.id.folderLink).setOnClickListener { pickFolder.launch(null) }
+        findViewById<TextView>(R.id.instructionsLink).setOnClickListener { showModels() }
 
         searchButton.setOnClickListener { connect() }
         hmiButton.setOnClickListener { choose("hmi") }
@@ -256,6 +261,11 @@ class MainActivity : AppCompatActivity() {
             }
         } ?: log("Bar did not report its versions")
 
+        model = BarModel.forBarType(deviceInfo?.barType)
+        model?.let { log("Model: ${it.name} (folder \"${it.folder}\")") }
+            ?: log("Unknown bar_type \"${deviceInfo?.barType}\" - no folder mapping")
+        rescanForModel()
+
         refreshFirmwareButtons()
         goTo(2)
         return true
@@ -347,14 +357,39 @@ class MainActivity : AppCompatActivity() {
         prefs().getString("folder", null)?.let { scanFolder(Uri.parse(it)) }
     }
 
+    /**
+     * Re-scans using the sub-folder that belongs to the connected model.
+     *
+     * The user picks one root folder; each model keeps its own sub-folder inside
+     * it. If the sub-folder is missing the root itself is used, and that is said
+     * out loud rather than silently offering another model's firmware.
+     */
+    private fun rescanForModel() {
+        val rootUri = prefs().getString("folder", null)?.let { Uri.parse(it) } ?: return
+        scanFolder(rootUri)
+    }
+
     private fun scanFolder(uri: Uri) {
         val root = DocumentFile.fromTreeUri(this, uri) ?: return
         lifecycleScope.launch {
-            firmware = withContext(Dispatchers.IO) { Firmware.scan(root) }
+            val wanted = model?.folder
+            val dir = if (wanted == null) root else {
+                val sub = withContext(Dispatchers.IO) {
+                    root.listFiles().firstOrNull {
+                        it.isDirectory && it.name?.equals(wanted, ignoreCase = true) == true
+                    }
+                }
+                if (sub == null) {
+                    log("No \"$wanted\" sub-folder in ${root.name} - scanning the root instead")
+                    root
+                } else sub
+            }
+
+            firmware = withContext(Dispatchers.IO) { Firmware.scan(dir) }
             refreshFirmwareButtons()
             if (step == 2) stepHint.text = describeAll()
-            folderStatus.text = summariseFolder(root.name)
-            log("Folder scanned: ${root.name}")
+            folderStatus.text = summariseFolder(dir.name)
+            log("Folder scanned: ${dir.name}")
         }
     }
 
@@ -567,6 +602,38 @@ class MainActivity : AppCompatActivity() {
                     .apply()
             }
             .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    /**
+     * Device list. Once a bar is connected only that one is shown - there is no
+     * point offering a choice the app has already made from the bar's report.
+     */
+    private fun showModels() {
+        val shown = model?.let { listOf(it) } ?: BarModel.ALL
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 20, 40, 10)
+        }
+
+        shown.forEach { m ->
+            val row = layoutInflater.inflate(R.layout.item_model, container, false)
+            row.findViewById<TextView>(R.id.modelName).text = m.name
+            row.findViewById<TextView>(R.id.modelSubtitle).text = m.subtitle
+            row.findViewById<TextView>(R.id.modelFolder).text = "folder: ${m.folder}"
+            row.findViewById<TextView>(R.id.modelBadge).text =
+                if (model != null) "connected" else ""
+            // Photos are not available yet; the placeholder background stands in.
+            row.findViewById<ImageView>(R.id.modelPhoto).setImageDrawable(null)
+            container.addView(row)
+        }
+
+        val scroll = ScrollView(this).apply { addView(container) }
+        AlertDialog.Builder(this)
+            .setTitle(if (model != null) "Connected device" else "Supported devices")
+            .setView(scroll)
+            .setPositiveButton("Close", null)
             .show()
     }
 
