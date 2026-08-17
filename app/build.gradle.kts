@@ -6,6 +6,9 @@ plugins {
 android {
     namespace = "com.strauss.wifiota"
     compileSdk = 34
+    // No native code in this project, so pin the NDK version away from AGP's
+    // default - otherwise it insists on downloading one that isn't here.
+    ndkVersion = "26.1.10909125"
 
     defaultConfig {
         // Deliberately different from namespace: Android treats this as a brand
