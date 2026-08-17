@@ -122,6 +122,8 @@
             </LinearLayout>
 
             <!-- STEP 1 - landing screen -->
+
+            <!-- STEP 2 - pick firmware -->
             <LinearLayout
                 android:id="@+id/step1"
                 android:layout_width="match_parent"
@@ -129,12 +131,13 @@
                 android:orientation="vertical">
 
                 <ImageView
-                    android:layout_width="76dp"
-                    android:layout_height="76dp"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="40dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="120dp"
+                    android:layout_marginTop="36dp"
+                    android:adjustViewBounds="true"
                     android:contentDescription="@string/app_name"
-                    android:src="@drawable/ic_drop" />
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_logo" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -225,7 +228,6 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- STEP 2 - pick firmware -->
             <LinearLayout
                 android:id="@+id/step2"
                 android:layout_width="match_parent"
