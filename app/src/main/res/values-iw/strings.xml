@@ -21,7 +21,7 @@
     <string name="step2_title">יש לבחור רכיב לצריבה</string>
     <string name="step3_title"> צריבת תוכנה</string>
     <string name="firmware_folder">בחר גרסת רכיב</string>
-    <string name="force_install">התקנה כפויה / שנמוך גרסה…</string>
+    <string name="force_install">שנמוך גרסה…</string>
     <string name="back">חזרה</string>
     <string name="flash">צריבה</string>
     <string name="keep_powered">יש להשאיר את האפליקציה פתוחה ואת הבר מחובר לחשמל במהלך העדכון.</string>
