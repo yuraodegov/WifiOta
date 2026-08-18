@@ -1,71 +1,77 @@
 <resources>
     <string name="app_name">WiFi OTA</string>
 
-    <string name="log">יומן</string>
-    <string name="setup">הגדרות</string>
+    <!-- header -->
+    <string name="log">Log</string>
+    <string name="setup">Setup</string>
 
-    <string name="app_title">מעדכן ברי מים</string>
-    <string name="app_subtitle">ניהול קושחה לברי מים</string>
-    <string name="firmware_source">מקור הקושחה</string>
-    <string name="no_folder">לא נבחרה תיקייה</string>
-    <string name="choose_folder">בחירת תיקייה ←</string>
-    <string name="before_connecting">לפני החיבור</string>
-    <string name="ap_mode_hint">יש להעביר את בר המים למצב AP.</string>
-    <string name="instructions">הוראות ←</string>
-    <string name="connect_button">התחברות לבר המים</string>
-    <string name="enable_wifi">יש להפעיל Wi-Fi</string>
+    <!-- home -->
+    <string name="app_title">WaterBar Updater</string>
+    <string name="app_subtitle">Firmware management for water bars</string>
+    <string name="firmware_source">FIRMWARE SOURCE</string>
+    <string name="no_folder">No folder selected</string>
+    <string name="choose_folder">Choose folder →</string>
+    <string name="before_connecting">BEFORE CONNECTING</string>
+    <string name="ap_mode_hint">Switch the water bar to AP Mode.</string>
+    <string name="instructions">Instructions →</string>
+    <string name="connect_button">Connect to Water Bar</string>
+    <string name="enable_wifi">Please activate WiFi</string>
 
-    <string name="step_of">שלב %1$d מתוך 3</string>
-    <string name="step1_title">התחברות לבר</string>
-    <string name="step1_hint">יש לבחור את המכשיר בחלון המערכת.</string>
-    <string name="step2_title">בחירת קושחה</string>
-    <string name="step3_title">צריבת קושחה</string>
-    <string name="firmware_folder">תיקיית קושחה</string>
-    <string name="force_install">התקנה כפויה / שנמוך גרסה…</string>
-    <string name="back">חזרה</string>
-    <string name="flash">צריבה</string>
-    <string name="keep_powered">יש להשאיר את האפליקציה פתוחה ואת הבר מחובר לחשמל במהלך העדכון.</string>
+    <!-- steps -->
+    <string name="step_of">STEP %1$d OF 3</string>
+    <string name="step1_title">Connect to the bar</string>
+    <string name="step1_hint">Pick the device in the system dialog.</string>
+    <string name="step2_title">Choose firmware</string>
+    <string name="step3_title">Flash firmware</string>
+    <string name="firmware_folder">Firmware folder</string>
+    <string name="force_install">Force install / downgrade…</string>
+    <string name="back">Back</string>
+    <string name="flash">Flash</string>
+    <string name="keep_powered">Keep the app open and the bar powered during the update.</string>
 
-    <string name="identifying">מזהה מכשיר…</string>
-    <string name="scanning">מחפש בר מים…</string>
-    <string name="searching_for">מחפש \"%1$s*\" – יש לבחור את הבר בחלון</string>
-    <string name="connected_ok">מחובר. יש לבדוק את הקישור לפני הצריבה.</string>
-    <string name="not_connected">לא מחובר: %1$s</string>
-    <string name="link_lost">הקישור אבד – יש לחפש שוב</string>
-    <string name="enter_prefix">יש לפתוח הגדרות ולהזין תחילית שם, לדוגמה Water</string>
-    <string name="no_bins">אין עדיין קבצי bin. – יש לבחור תיקייה.</string>
-    <string name="pick_what">יש לבחור מה לצרוב.</string>
-    <string name="up_to_date">מעודכן</string>
-    <string name="none_found">לא נמצא</string>
-    <string name="sending">שולח %1$d%% מתוך %2$d ק\"ב</string>
-    <string name="all_sent">נשלחו %1$d ק\"ב – ממתין לבר</string>
-    <string name="retry_in">הבר עסוק – ניסיון חוזר בעוד %1$d שנ\'</string>
-    <string name="failed_see_log">נכשל – יש לפתוח את היומן לפרטים</string>
-    <string name="delivered_hmi">הקובץ נשלח. הבר כותב אותו (כדקה וחצי) ואז מופעל מחדש. יש להמתין ולהתחבר שוב.</string>
-    <string name="delivered_addon">הקובץ נשלח. ה-HMI מעביר אותו ל-STM32 (1–2 דקות). אין לנתק חשמל. יש לבדוק \'ver\' ב-HC.</string>
-    <string name="delivered">הקובץ נשלח.</string>
+    <!-- statuses -->
+    <string name="identifying">Identifying device…</string>
+    <string name="scanning">Scanning for water bar…</string>
+    <string name="searching_for">Searching for \"%1$s*\" – pick the bar in the dialog</string>
+    <string name="connected_ok">Connected. Check the link before flashing.</string>
+    <string name="not_connected">Not connected: %1$s</string>
+    <string name="link_lost">Link lost – search again</string>
+    <string name="enter_prefix">Open Setup and enter a name prefix, e.g. Water</string>
+    <string name="no_bins">No .bin files yet – choose the folder.</string>
+    <string name="pick_what">Pick what to flash.</string>
+    <string name="up_to_date">up to date</string>
+    <string name="none_found">none found</string>
+    <string name="sending">Sending %1$d%% of %2$d KB</string>
+    <string name="all_sent">All %1$d KB sent – waiting for the bar</string>
+    <string name="retry_in">Bar busy – retrying in %1$ds</string>
+    <string name="failed_see_log">Failed – open Log for details</string>
+    <string name="delivered_hmi">File delivered. The bar is writing it (~1.5 min), then reboots. Wait, then connect again.</string>
+    <string name="delivered_addon">File delivered. HMI is pushing it to the STM32 (1–2 min). Do not cut power. Check \'ver\' on HC.</string>
+    <string name="delivered">File delivered.</string>
 
-    <string name="close">סגירה</string>
-    <string name="clear">ניקוי</string>
-    <string name="save">שמירה</string>
-    <string name="cancel">ביטול</string>
-    <string name="install">התקנה</string>
-    <string name="downgrade">שנמוך גרסה</string>
-    <string name="install_q">להתקין את הקובץ?</string>
-    <string name="downgrade_q">לשנמך גרסה?</string>
-    <string name="older_warning">הגרסה ישנה יותר מזו המותקנת – שנמוך גרסה.</string>
-    <string name="supported_devices">מכשירים נתמכים</string>
-    <string name="connected_device">המכשיר המחובר</string>
-    <string name="connected_badge">מחובר</string>
-    <string name="folder_label">תיקייה: %1$s</string>
+    <!-- dialogs -->
+    <string name="close">Close</string>
+    <string name="clear">Clear</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="install">Install</string>
+    <string name="downgrade">Downgrade</string>
+    <string name="install_q">Install this file?</string>
+    <string name="downgrade_q">Downgrade?</string>
+    <string name="older_warning">This is OLDER than what is installed – a downgrade.</string>
+    <string name="supported_devices">Supported devices</string>
+    <string name="connected_device">Connected device</string>
+    <string name="connected_badge">connected</string>
+    <string name="folder_label">folder: %1$s</string>
 
-    <string name="hint_prefix">תחילית שם, לדוגמה Water</string>
-    <string name="hint_pass">סיסמה</string>
-    <string name="hint_ip">כתובת IP של הבר</string>
-    <string name="show_password">הצגת סיסמה</string>
+    <!-- setup -->
+    <string name="hint_prefix">Name prefix, e.g. Water</string>
+    <string name="hint_pass">Passphrase</string>
+    <string name="hint_ip">Bar IP</string>
+    <string name="show_password">Show password</string>
     <string name="transaction_complete">transactionComplete=true</string>
-    <string name="auto_retry">ניסיון חוזר אוטומטי ב-HTTP 500</string>
-    <string name="language">שפה</string>
+    <string name="auto_retry">Auto-retry on HTTP 500</string>
+    <string name="language">Language</string>
     <string name="lang_en">English</string>
     <string name="lang_iw">עברית</string>
 </resources>
