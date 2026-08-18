@@ -1,3 +1,71 @@
 <resources>
     <string name="app_name">WiFi OTA</string>
+
+    <string name="log">יומן</string>
+    <string name="setup">הגדרות</string>
+
+    <string name="app_title">מעדכן ברי מים</string>
+    <string name="app_subtitle">ניהול קושחה לברי מים</string>
+    <string name="firmware_source">מקור הקושחה</string>
+    <string name="no_folder">לא נבחרה תיקייה</string>
+    <string name="choose_folder">בחירת תיקייה ←</string>
+    <string name="before_connecting">לפני החיבור</string>
+    <string name="ap_mode_hint">יש להעביר את בר המים למצב AP.</string>
+    <string name="instructions">הוראות ←</string>
+    <string name="connect_button">התחברות לבר המים</string>
+    <string name="enable_wifi">יש להפעיל Wi-Fi</string>
+
+    <string name="step_of">שלב %1$d מתוך 3</string>
+    <string name="step1_title">התחברות לבר</string>
+    <string name="step1_hint">יש לבחור את המכשיר בחלון המערכת.</string>
+    <string name="step2_title">בחירת קושחה</string>
+    <string name="step3_title">צריבת קושחה</string>
+    <string name="firmware_folder">תיקיית קושחה</string>
+    <string name="force_install">התקנה כפויה / שנמוך גרסה…</string>
+    <string name="back">חזרה</string>
+    <string name="flash">צריבה</string>
+    <string name="keep_powered">יש להשאיר את האפליקציה פתוחה ואת הבר מחובר לחשמל במהלך העדכון.</string>
+
+    <string name="identifying">מזהה מכשיר…</string>
+    <string name="scanning">מחפש בר מים…</string>
+    <string name="searching_for">מחפש \"%1$s*\" – יש לבחור את הבר בחלון</string>
+    <string name="connected_ok">מחובר. יש לבדוק את הקישור לפני הצריבה.</string>
+    <string name="not_connected">לא מחובר: %1$s</string>
+    <string name="link_lost">הקישור אבד – יש לחפש שוב</string>
+    <string name="enter_prefix">יש לפתוח הגדרות ולהזין תחילית שם, לדוגמה Water</string>
+    <string name="no_bins">אין עדיין קבצי bin. – יש לבחור תיקייה.</string>
+    <string name="pick_what">יש לבחור מה לצרוב.</string>
+    <string name="up_to_date">מעודכן</string>
+    <string name="none_found">לא נמצא</string>
+    <string name="sending">שולח %1$d%% מתוך %2$d ק\"ב</string>
+    <string name="all_sent">נשלחו %1$d ק\"ב – ממתין לבר</string>
+    <string name="retry_in">הבר עסוק – ניסיון חוזר בעוד %1$d שנ\'</string>
+    <string name="failed_see_log">נכשל – יש לפתוח את היומן לפרטים</string>
+    <string name="delivered_hmi">הקובץ נשלח. הבר כותב אותו (כדקה וחצי) ואז מופעל מחדש. יש להמתין ולהתחבר שוב.</string>
+    <string name="delivered_addon">הקובץ נשלח. ה-HMI מעביר אותו ל-STM32 (1–2 דקות). אין לנתק חשמל. יש לבדוק \'ver\' ב-HC.</string>
+    <string name="delivered">הקובץ נשלח.</string>
+
+    <string name="close">סגירה</string>
+    <string name="clear">ניקוי</string>
+    <string name="save">שמירה</string>
+    <string name="cancel">ביטול</string>
+    <string name="install">התקנה</string>
+    <string name="downgrade">שנמוך גרסה</string>
+    <string name="install_q">להתקין את הקובץ?</string>
+    <string name="downgrade_q">לשנמך גרסה?</string>
+    <string name="older_warning">הגרסה ישנה יותר מזו המותקנת – שנמוך גרסה.</string>
+    <string name="supported_devices">מכשירים נתמכים</string>
+    <string name="connected_device">המכשיר המחובר</string>
+    <string name="connected_badge">מחובר</string>
+    <string name="folder_label">תיקייה: %1$s</string>
+
+    <string name="hint_prefix">תחילית שם, לדוגמה Water</string>
+    <string name="hint_pass">סיסמה</string>
+    <string name="hint_ip">כתובת IP של הבר</string>
+    <string name="show_password">הצגת סיסמה</string>
+    <string name="transaction_complete">transactionComplete=true</string>
+    <string name="auto_retry">ניסיון חוזר אוטומטי ב-HTTP 500</string>
+    <string name="language">שפה</string>
+    <string name="lang_en">English</string>
+    <string name="lang_iw">עברית</string>
 </resources>

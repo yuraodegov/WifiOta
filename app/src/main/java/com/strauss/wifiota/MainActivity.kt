@@ -20,6 +20,10 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -82,6 +86,12 @@ class MainActivity : AppCompatActivity() {
     ) { uri -> uri?.let { onManualFilePicked(it) } }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply the stored language before any view is inflated.
+        prefs().getString("lang", null)?.let {
+            if (AppCompatDelegate.getApplicationLocales().isEmpty) {
+                AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(it))
+            }
+        }
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
@@ -141,7 +151,7 @@ class MainActivity : AppCompatActivity() {
         wifiOn = wifi.isWifiEnabled
         if (step == 1) {
             searchButton.text =
-                if (wifiOn) "Connect to Water Bar" else "Please activate WiFi"
+                if (wifiOn) getString(R.string.connect_button) else getString(R.string.enable_wifi)
         }
     }
 
@@ -172,19 +182,19 @@ class MainActivity : AppCompatActivity() {
         bar2.setBackgroundColor(if (step >= 2) done else idle)
         bar3.setBackgroundColor(if (step >= 3) done else idle)
 
-        stepCounter.text = "STEP $step OF 3"
+        stepCounter.text = getString(R.string.step_of, step)
         when (step) {
             1 -> {
-                stepTitle.text = "Connect to the bar"
-                stepHint.text = "Pick the device in the system dialog."
+                stepTitle.text = getString(R.string.step1_title)
+                stepHint.text = getString(R.string.step1_hint)
             }
             2 -> {
-                stepTitle.text = "Choose firmware"
+                stepTitle.text = getString(R.string.step2_title)
                 stepHint.text = deviceInfo?.let { "Bar ${it.barType} - ${describeAll()}" }
                     ?: describeAll()
             }
             3 -> {
-                stepTitle.text = "Flash firmware"
+                stepTitle.text = getString(R.string.step3_title)
                 stepHint.text = ""
             }
         }
@@ -210,7 +220,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         searchButton.isEnabled = false
-        searchButton.text = "Identifying device..."
+        searchButton.text = getString(R.string.identifying)
 
         lifecycleScope.launch {
             try {
@@ -225,11 +235,11 @@ class MainActivity : AppCompatActivity() {
 
                 // Android rejects a match-all pattern, so a prefix is mandatory.
                 if (ssid.isEmpty()) {
-                    stepHint.text = "Open Setup and enter a name prefix, e.g. Water"
+                    stepHint.text = getString(R.string.enter_prefix)
                     return@launch
                 }
 
-                searchButton.text = "Scanning for water bar..."
+                searchButton.text = getString(R.string.scanning)
                 log("Searching for \"$ssid*\" ...")
                 val picked = barNetwork.connect(ssid, prefs().getString("pass", ""))
                 log("Joined - sockets are pinned to the bar")
@@ -238,7 +248,7 @@ class MainActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 log("Connect failed: ${e.message}")
-                stepHint.text = "Not connected: ${e.message}"
+                stepHint.text = getString(R.string.not_connected, e.message ?: "")
             } finally {
                 searchButton.isEnabled = true
                 refreshWifiState()
@@ -322,13 +332,13 @@ class MainActivity : AppCompatActivity() {
             append("component: ").append(which).append('\n')
             append("file version: ").append(fileVer).append('\n')
             append("on the bar: ").append(installed ?: "unknown").append('\n')
-            if (older) append("\nThis is OLDER than what is installed - a downgrade.")
+            if (older) append("\n").append(getString(R.string.older_warning))
         }
 
         AlertDialog.Builder(this)
-            .setTitle(if (older) "Downgrade?" else "Install this file?")
+            .setTitle(getString(if (older) R.string.downgrade_q else R.string.install_q))
             .setMessage(message)
-            .setPositiveButton(if (older) "Downgrade" else "Install") { _, _ ->
+            .setPositiveButton(getString(if (older) R.string.downgrade else R.string.install)) { _, _ ->
                 manualFile = file
                 component = which
                 summary.text = "$name\nversion $fileVer\ncomponent $which"
@@ -338,7 +348,7 @@ class MainActivity : AppCompatActivity() {
                 goTo(3)
                 flash()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 
@@ -404,7 +414,7 @@ class MainActivity : AppCompatActivity() {
     private fun applyLabel(button: Button, title: String, file: DocumentFile?, which: String) {
         val name = file?.name
         if (name == null) {
-            button.text = "$title - none found"
+            button.text = "$title - " + getString(R.string.none_found)
             button.setTextColor(resources.getColor(R.color.text_muted, theme))
             button.isEnabled = false
             return
@@ -422,7 +432,7 @@ class MainActivity : AppCompatActivity() {
 
         val upToDate = compareVersions(installed, fileVer) >= 0
         if (upToDate) {
-            button.text = "$title  v$installed  ✓ up to date"
+            button.text = "$title  v$installed  ✓ " + getString(R.string.up_to_date)
             button.setTextColor(resources.getColor(R.color.ok, theme))
             button.isEnabled = false
         } else {
@@ -451,13 +461,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun describeAll(): String =
         if (firmware.hmi == null && firmware.addon == null && firmware.rc == null)
-            "No .bin files yet - choose the folder."
-        else "Pick what to flash."
+            getString(R.string.no_bins)
+        else getString(R.string.pick_what)
 
     // STEP 3
     private fun flash() {
         val net = barNetwork.network
-            ?: run { progressText.text = "Link lost - go back and search"; return }
+            ?: run { progressText.text = getString(R.string.link_lost); return }
         val host = prefs().getString("ip", DEFAULT_IP).orEmpty()
         val file = fileFor(component) ?: return
 
@@ -513,14 +523,14 @@ class MainActivity : AppCompatActivity() {
                                 // Cap at 99: only the bar's reply proves receipt.
                                 uploadBar.progress = minOf(percent, 99)
                                 progressText.text =
-                                    if (percent >= 100) "All $sizeKb KB sent - waiting for the bar"
-                                    else "Sending $percent% of $sizeKb KB"
+                                    if (percent >= 100) getString(R.string.all_sent, sizeKb)
+                                    else getString(R.string.sending, percent, sizeKb)
                             }
                         },
                         onWait = { left ->
                             lifecycleScope.launch {
                                 progressText.text = if (left > 0)
-                                    "Bar busy - retrying in ${left}s" else "Retrying now"
+                                    getString(R.string.retry_in, left) else "Retrying now"
                             }
                         }
                     ) { line -> lifecycleScope.launch { log(line) } }
@@ -531,13 +541,9 @@ class MainActivity : AppCompatActivity() {
                         uploadBar.progress = 100
                         val confirmed = outcome == UploadOutcome.CONFIRMED
                         progressText.text = when {
-                            component == "hmi" ->
-                                "File delivered. The bar is writing it (~1.5 min), " +
-                                        "then reboots. Wait, then connect again."
-                            component == "fizzz" ->
-                                "File delivered. HMI is pushing it to the STM32 (1-2 min). " +
-                                        "Do not cut power. Check 'ver' on HC."
-                            else -> "File delivered."
+                            component == "hmi" -> getString(R.string.delivered_hmi)
+                            component == "fizzz" -> getString(R.string.delivered_addon)
+                            else -> getString(R.string.delivered)
                         }
                         log(if (confirmed) "Bar confirmed: $name" else "Delivered without reply: $name")
                         kotlinx.coroutines.delay(3000)
@@ -545,7 +551,7 @@ class MainActivity : AppCompatActivity() {
                         goTo(1)
                     }
                     UploadOutcome.FAILED -> {
-                        progressText.text = "Failed - open Log for details"
+                        progressText.text = getString(R.string.failed_see_log)
                         kotlinx.coroutines.delay(4000)
                         goTo(2)
                     }
@@ -567,8 +573,15 @@ class MainActivity : AppCompatActivity() {
         val pass = view.findViewById<EditText>(R.id.passField)
         val ip = view.findViewById<EditText>(R.id.ipField)
         val showPass = view.findViewById<CheckBox>(R.id.showPass)
+        val langGroup = view.findViewById<RadioGroup>(R.id.langGroup)
         val tc = view.findViewById<CheckBox>(R.id.tcCheck)
         val retry = view.findViewById<CheckBox>(R.id.retryCheck)
+
+        // Reflect the language currently in force.
+        val currentLang = AppCompatDelegate.getApplicationLocales()
+            .takeIf { !it.isEmpty }?.get(0)?.language ?: "en"
+        langGroup.check(if (currentLang.startsWith("iw") || currentLang.startsWith("he"))
+            R.id.langIw else R.id.langEn)
 
         with(prefs()) {
             ssid.setText(getString("ssid", ""))
@@ -590,9 +603,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         AlertDialog.Builder(this)
-            .setTitle("Setup")
+            .setTitle(getString(R.string.setup))
             .setView(view)
-            .setPositiveButton("Save") { _, _ ->
+            .setPositiveButton(getString(R.string.save)) { _, _ ->
                 prefs().edit()
                     .putString("ssid", ssid.text.toString().trim())
                     .putString("pass", pass.text.toString())
@@ -600,8 +613,17 @@ class MainActivity : AppCompatActivity() {
                     .putBoolean("tc", tc.isChecked)
                     .putBoolean("retry", retry.isChecked)
                     .apply()
+
+                // Changing the locale recreates the activity, so do it last.
+                val tag = if (langGroup.checkedRadioButtonId == R.id.langIw) "iw" else "en"
+                if (tag != currentLang) {
+                    prefs().edit().putString("lang", tag).apply()
+                    AppCompatDelegate.setApplicationLocales(
+                        LocaleListCompat.forLanguageTags(tag)
+                    )
+                }
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 
@@ -621,9 +643,9 @@ class MainActivity : AppCompatActivity() {
             val row = layoutInflater.inflate(R.layout.item_model, container, false)
             row.findViewById<TextView>(R.id.modelName).text = m.name
             row.findViewById<TextView>(R.id.modelSubtitle).text = m.subtitle
-            row.findViewById<TextView>(R.id.modelFolder).text = "folder: ${m.folder}"
+            row.findViewById<TextView>(R.id.modelFolder).text = getString(R.string.folder_label, m.folder)
             row.findViewById<TextView>(R.id.modelBadge).text =
-                if (model != null) "connected" else ""
+                if (model != null) getString(R.string.connected_badge) else ""
             // Photos are not available yet; the placeholder background stands in.
             row.findViewById<ImageView>(R.id.modelPhoto).setImageDrawable(null)
             container.addView(row)
@@ -631,9 +653,9 @@ class MainActivity : AppCompatActivity() {
 
         val scroll = ScrollView(this).apply { addView(container) }
         AlertDialog.Builder(this)
-            .setTitle(if (model != null) "Connected device" else "Supported devices")
+            .setTitle(getString(if (model != null) R.string.connected_device else R.string.supported_devices))
             .setView(scroll)
-            .setPositiveButton("Close", null)
+            .setPositiveButton(getString(R.string.close), null)
             .show()
     }
 
@@ -646,10 +668,10 @@ class MainActivity : AppCompatActivity() {
         }
         val scroll = ScrollView(this).apply { addView(text) }
         AlertDialog.Builder(this)
-            .setTitle("Log")
+            .setTitle(getString(R.string.log))
             .setView(scroll)
-            .setPositiveButton("Close", null)
-            .setNeutralButton("Clear") { _, _ -> logLines.clear() }
+            .setPositiveButton(getString(R.string.close), null)
+            .setNeutralButton(getString(R.string.clear)) { _, _ -> logLines.clear() }
             .show()
     }
 

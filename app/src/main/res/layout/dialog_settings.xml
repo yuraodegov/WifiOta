@@ -9,7 +9,7 @@
         android:id="@+id/ssidField"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Name prefix, e.g. Water"
+        android:hint="@string/hint_prefix"
         android:inputType="text"
         android:textColor="@color/text_primary" />
 
@@ -17,7 +17,7 @@
         android:id="@+id/passField"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Passphrase"
+        android:hint="@string/hint_pass"
         android:inputType="textPassword"
         android:textColor="@color/text_primary" />
 
@@ -25,13 +25,13 @@
         android:id="@+id/showPass"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Show password" />
+        android:text="@string/show_password" />
 
     <EditText
         android:id="@+id/ipField"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Bar IP"
+        android:hint="@string/hint_ip"
         android:inputType="text"
         android:textColor="@color/text_primary" />
 
@@ -41,12 +41,41 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:checked="true"
-        android:text="transactionComplete=true" />
+        android:text="@string/transaction_complete" />
 
     <CheckBox
         android:id="@+id/retryCheck"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:checked="true"
-        android:text="Auto-retry on HTTP 500" />
+        android:text="@string/auto_retry" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:letterSpacing="0.08"
+        android:text="@string/language"
+        android:textColor="@color/text_muted"
+        android:textSize="11sp" />
+
+    <RadioGroup
+        android:id="@+id/langGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/langEn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/lang_en" />
+
+        <RadioButton
+            android:id="@+id/langIw"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="24dp"
+            android:text="@string/lang_iw" />
+    </RadioGroup>
 </LinearLayout>
