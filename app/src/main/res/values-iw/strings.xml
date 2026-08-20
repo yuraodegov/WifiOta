@@ -1,12 +1,12 @@
 <resources>
-    <string name="app_name">WiFi OTA</string>
+    <string name="app_name">מעדכן ברי מים</string>
 
     <string name="log">יומן</string>
     <string name="setup">הגדרות</string>
 
     <string name="app_title">מעדכן ברי מים</string>
     <string name="app_subtitle">ניהול תוכנה לברי מים</string>
-    <string name="firmware_source">ניהול גרסאות תוכנה לברי המים</string>
+    <string name="firmware_source">מקור גרסאות התוכנה</string>
     <string name="no_folder">לא נבחרה תיקייה</string>
     <string name="choose_folder">בחירת תיקייה ←</string>
     <string name="before_connecting">לפני החיבור</string>
@@ -19,7 +19,7 @@
     <string name="step1_title">התחברות לבר</string>
     <string name="step1_hint">יש לבחור את המכשיר בחלון המערכת.</string>
     <string name="step2_title">יש לבחור רכיב לצריבה</string>
-    <string name="step3_title"> צריבת תוכנה</string>
+    <string name="step3_title">צריבת תוכנה</string>
     <string name="firmware_folder">בחר גרסת רכיב</string>
     <string name="force_install">שנמוך גרסה…</string>
     <string name="back">חזרה</string>
@@ -33,7 +33,7 @@
     <string name="not_connected">לא מחובר: %1$s</string>
     <string name="link_lost">הקישור אבד – יש לחפש שוב</string>
     <string name="enter_prefix">יש לפתוח הגדרות ולהזין תחילית שם, לדוגמה Water</string>
-    <string name="no_bins">אין עדיין קבצי bin. – יש לבחור תיקייה.</string>
+    <string name="no_bins">אין עדיין קבצי bin.\u200f – יש לבחור תיקייה.</string>
     <string name="pick_what">יש לבחור מה לצרוב.</string>
     <string name="up_to_date">מעודכן</string>
     <string name="none_found">לא נמצא</string>
@@ -44,6 +44,21 @@
     <string name="delivered_hmi">הקובץ נשלח. הבר כותב אותו (כדקה וחצי) ואז מופעל מחדש. יש להמתין ולהתחבר שוב.</string>
     <string name="delivered_addon">הקובץ נשלח. ה-HMI מעביר אותו ל-STM32 (1–2 דקות). אין לנתק חשמל. יש לבדוק \'ver\' ב-HC.</string>
     <string name="delivered">הקובץ נשלח.</string>
+
+    <string name="bar_and_hint">בר %1$s \u2013 %2$s</string>
+    <string name="joined_no_answer">בוצע חיבור, אך הבר לא ענה בכתובת %1$s</string>
+    <string name="summary_format">%1$s\nגרסה %2$s\nרכיב %3$s</string>
+    <string name="not_a_bin">הקובץ אינו מסוג bin.\u200f: %1$s</string>
+    <string name="unknown_component">לא ניתן לזהות את הרכיב מתוך \"%1$s\"</string>
+    <string name="dlg_component">רכיב: %1$s</string>
+    <string name="dlg_file_version">גרסת הקובץ: %1$s</string>
+    <string name="dlg_on_bar">מותקן בבר: %1$s</string>
+    <string name="unknown">לא ידוע</string>
+    <string name="reading_hashing">קורא ומחשב סיכום ביקורת עבור %1$s</string>
+    <string name="bar_not_reachable">אין תקשורת עם הבר</string>
+    <string name="retrying_now">מנסה שוב כעת</string>
+    <string name="error_generic">שגיאה: %1$s</string>
+    <string name="log_empty">ריק</string>
 
     <string name="close">סגירה</string>
     <string name="clear">ניקוי</string>

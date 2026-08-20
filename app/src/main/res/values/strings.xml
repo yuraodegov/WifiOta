@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">WiFi OTA</string>
+    <string name="app_name">WaterBar Updater</string>
 
     <!-- header -->
     <string name="log">Log</string>
@@ -48,6 +48,22 @@
     <string name="delivered_hmi">File delivered. The bar is writing it (~1.5 min), then reboots. Wait, then connect again.</string>
     <string name="delivered_addon">File delivered. HMI is pushing it to the STM32 (1–2 min). Do not cut power. Check \'ver\' on HC.</string>
     <string name="delivered">File delivered.</string>
+
+    <!-- runtime messages that used to be hard-coded in MainActivity -->
+    <string name="bar_and_hint">Bar %1$s \u2013 %2$s</string>
+    <string name="joined_no_answer">Joined, but the bar did not answer on %1$s</string>
+    <string name="summary_format">%1$s\nversion %2$s\ncomponent %3$s</string>
+    <string name="not_a_bin">Not a .bin file: %1$s</string>
+    <string name="unknown_component">Cannot tell the component from \"%1$s\"</string>
+    <string name="dlg_component">component: %1$s</string>
+    <string name="dlg_file_version">file version: %1$s</string>
+    <string name="dlg_on_bar">on the bar: %1$s</string>
+    <string name="unknown">unknown</string>
+    <string name="reading_hashing">Reading and hashing %1$s</string>
+    <string name="bar_not_reachable">Bar not reachable</string>
+    <string name="retrying_now">Retrying now</string>
+    <string name="error_generic">Error: %1$s</string>
+    <string name="log_empty">Empty</string>
 
     <!-- dialogs -->
     <string name="close">Close</string>

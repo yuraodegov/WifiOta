@@ -43,11 +43,15 @@ class BarNetwork(context: Context) {
 
     /**
      * Binds to the Wi-Fi the phone is already on, without asking the user
-     * anything. Matches only a network with no internet - which is exactly what
-     * a bar AP looks like - so it will not grab the office Wi-Fi by mistake.
+     * anything.
      *
-     * Returns null if nothing matched within the timeout. Whether this really
-     * is a bar has to be settled by pinging it afterwards.
+     * removeCapability(NET_CAPABILITY_INTERNET) drops the *requirement* for
+     * internet - it does NOT limit the match to networks without it. Any Wi-Fi
+     * qualifies here, office access points included. The only thing that proves
+     * this is a bar is the ping in MainActivity.verify(); when that fails the
+     * caller must call releaseAttachment().
+     *
+     * Returns null if nothing matched within the timeout.
      */
     suspend fun attachToCurrentWifi(timeoutMs: Int = ATTACH_TIMEOUT_MS): Network? =
         suspendCancellableCoroutine { cont ->
@@ -63,8 +67,10 @@ class BarNetwork(context: Context) {
                     if (settled.compareAndSet(false, true)) cont.resume(net)
                 }
 
+                // Both callbacks share this field, and an unrelated Wi-Fi
+                // dropping must not clear a live link to the bar.
                 override fun onLost(net: Network) {
-                    network = null
+                    if (network == net) network = null
                 }
 
                 override fun onUnavailable() {
@@ -106,7 +112,7 @@ class BarNetwork(context: Context) {
                 }
 
                 override fun onLost(net: Network) {
-                    network = null
+                    if (network == net) network = null
                 }
 
                 override fun onUnavailable() {
