@@ -65,6 +65,21 @@
     <string name="error_generic">Error: %1$s</string>
     <string name="log_empty">Empty</string>
 
+    <!-- firmware updates from the server -->
+    <string name="update_link">Update from server \u2192</string>
+    <string name="update_checking">Checking the server\u2026</string>
+    <string name="update_no_url">Set the firmware server address in Setup</string>
+    <string name="update_downloading">%1$s \u2013 %2$d%%</string>
+    <string name="update_none">Everything is up to date</string>
+    <string name="update_done">Downloaded %1$d file(s)</string>
+    <string name="update_failed">Update failed: %1$s</string>
+    <string name="source_downloaded">Downloaded (%1$s)</string>
+    <string name="archive_title">Replaced versions: %1$s</string>
+    <string name="archive_empty">Nothing archived</string>
+    <string name="clear_archive">Clear archive</string>
+    <string name="hint_fw_url">Firmware server URL</string>
+    <string name="hint_fw_sas">SAS token (empty if public)</string>
+
     <!-- dialogs -->
     <string name="close">Close</string>
     <string name="clear">Clear</string>

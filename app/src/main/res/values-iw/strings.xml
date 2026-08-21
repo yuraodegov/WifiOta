@@ -60,6 +60,20 @@
     <string name="error_generic">שגיאה: %1$s</string>
     <string name="log_empty">ריק</string>
 
+    <string name="update_link">עדכון מהשרת \u2192</string>
+    <string name="update_checking">בודק מול השרת\u2026</string>
+    <string name="update_no_url">יש להזין את כתובת שרת הגרסאות בהגדרות</string>
+    <string name="update_downloading">%1$s \u2013 %2$d%%</string>
+    <string name="update_none">הכול מעודכן</string>
+    <string name="update_done">הורדו %1$d קבצים</string>
+    <string name="update_failed">העדכון נכשל: %1$s</string>
+    <string name="source_downloaded">הורד מהשרת (%1$s)</string>
+    <string name="archive_title">גרסאות שהוחלפו: %1$s</string>
+    <string name="archive_empty">אין גרסאות שמורות</string>
+    <string name="clear_archive">ניקוי הארכיון</string>
+    <string name="hint_fw_url">כתובת שרת הגרסאות</string>
+    <string name="hint_fw_sas">אסימון SAS (ריק אם הגישה ציבורית)</string>
+
     <string name="close">סגירה</string>
     <string name="clear">ניקוי</string>
     <string name="save">שמירה</string>
