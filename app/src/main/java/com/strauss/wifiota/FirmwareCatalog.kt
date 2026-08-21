@@ -1,109 +1,93 @@
 package com.strauss.wifiota
 
-import android.content.Context
-import java.io.File
+import org.json.JSONObject
 
 /**
- * The app's own firmware directory.
+ * What the server says is available.
  *
- *   filesDir/firmware/<model>/                 current images
- *   filesDir/firmware/<model>/archive/         images that were replaced
+ * Azure Blob Storage has no usable directory listing, so a plain link to a
+ * "folder" tells the app nothing. A manifest next to the images is what makes
+ * the whole thing work - one file, fetched first, describing everything else.
  *
- * Private storage needs no permission and no folder picking, and it survives
- * app restarts. It does NOT survive an uninstall - anything that must be kept
- * lives on the server, not here.
+ * manifest.json:
+ * {
+ *   "updated": "2026-08-20",
+ *   "models": {
+ *     "primium23": {
+ *       "hmi":   { "version": "0.03.132",
+ *                  "file": "element-p-hmi-0.03.132_enc.bin",
+ *                  "sha256": "ab12...", "size": 1892352 },
+ *       "fizzz": { "version": "00.00.403",
+ *                  "file": "addon-fizz-00.00.403.bin",
+ *                  "sha256": "cd34...", "size": 262144 }
+ *     }
+ *   }
+ * }
  *
- * A replaced image is never deleted. It is moved into archive/ and stays there
- * until the user clears it deliberately: rolling back to yesterday's build in
- * front of a customer is worth a few megabytes.
+ * Keys under "models" are the same folder names BarModel already uses, so the
+ * connected bar maps straight onto a manifest entry.
+ *
+ * "sha256" is not decoration: the image is verified against it before it is
+ * allowed anywhere near a device, and the same value is later handed to the
+ * bar in the upload query.
+ *
+ * "file" is resolved against the manifest's own folder as <base>/<model>/<file>
+ * unless the entry carries an absolute "url".
  */
-class FirmwareStore(private val context: Context) {
+data class CatalogEntry(
+    /** "hmi", "fizzz" or "rc" - matches what OtaClient sends. */
+    val component: String,
+    val version: String,
+    val fileName: String,
+    val sha256: String,
+    val size: Long,
+    /** Absolute override; null means build the URL from the base. */
+    val url: String?
+)
 
-    private val root: File get() = File(context.filesDir, "firmware")
+data class FirmwareCatalog(
+    val updated: String,
+    /** model folder -> its components. */
+    val models: Map<String, List<CatalogEntry>>
+) {
+    fun entriesFor(folder: String): List<CatalogEntry> = models[folder].orEmpty()
 
-    fun modelDir(folder: String): File =
-        File(root, folder).apply { mkdirs() }
+    companion object {
+        /** Component keys accepted in the manifest, in flashing order. */
+        private val COMPONENTS = listOf("hmi", "fizzz", "rc")
 
-    fun archiveDir(folder: String): File =
-        File(modelDir(folder), Firmware.ARCHIVE_DIR).apply { mkdirs() }
+        /**
+         * Returns null when the text is not a manifest at all - a login page or
+         * an Azure error XML both arrive as HTTP 200 with a body.
+         */
+        fun parse(json: String): FirmwareCatalog? = try {
+            val root = JSONObject(json)
+            val modelsJson = root.getJSONObject("models")
+            val models = mutableMapOf<String, List<CatalogEntry>>()
 
-    /** Current images for a model, archive excluded. */
-    fun scan(folder: String): Firmware.Set {
-        val dir = File(root, folder)
-        return if (dir.isDirectory) Firmware.scanLocal(dir) else Firmware.Set()
-    }
+            for (folder in modelsJson.keys()) {
+                val perModel = modelsJson.getJSONObject(folder)
+                val entries = mutableListOf<CatalogEntry>()
+                for (component in COMPONENTS) {
+                    val e = perModel.optJSONObject(component) ?: continue
+                    val file = e.optString("file")
+                    if (file.isEmpty()) continue
+                    entries += CatalogEntry(
+                        component = component,
+                        version = e.optString("version"),
+                        fileName = file,
+                        sha256 = e.optString("sha256").lowercase(),
+                        size = e.optLong("size", 0L),
+                        url = e.optString("url").ifEmpty { null }
+                    )
+                }
+                if (entries.isNotEmpty()) models[folder] = entries
+            }
 
-    /** True when anything at all has been downloaded for this model. */
-    fun hasAnything(folder: String): Boolean = !scan(folder).isEmpty
-
-    /** Version currently held locally for a component, or null. */
-    fun localVersion(folder: String, component: String): String? {
-        val set = scan(folder)
-        val src = when (component) {
-            "hmi" -> set.hmi
-            "fizzz" -> set.addon
-            "rc" -> set.rc
-            else -> null
-        } ?: return null
-        return Firmware.versionFromName(src.name, component).ifEmpty { null }
-    }
-
-    fun tempFile(fileName: String): File =
-        File(context.cacheDir, "dl_$fileName")
-
-    /**
-     * Moves a verified download into place, archiving whatever it replaces.
-     *
-     * Everything already in the model folder that belongs to the same component
-     * goes to archive/ first - including a file with the same name, which is
-     * renamed rather than overwritten so a re-download never destroys the copy
-     * that is known to work.
-     *
-     * @return the installed file.
-     */
-    fun install(folder: String, component: String, fileName: String, temp: File): File {
-        val dir = modelDir(folder)
-        val archive = archiveDir(folder)
-
-        dir.listFiles().orEmpty()
-            .filter { it.isFile && it.name.lowercase().endsWith(".bin") }
-            .filter { Firmware.componentFromName(it.name) == component }
-            .forEach { old -> archiveOne(old, archive) }
-
-        val target = File(dir, fileName)
-        if (!temp.renameTo(target)) {
-            // Different mount points (cacheDir vs filesDir on some devices)
-            // make rename fail; copying is the fallback, not the default.
-            temp.copyTo(target, overwrite = true)
-            temp.delete()
+            if (models.isEmpty()) null
+            else FirmwareCatalog(root.optString("updated"), models)
+        } catch (e: Exception) {
+            null
         }
-        return target
-    }
-
-    /** Keeps every archived copy: same name gets a numeric suffix. */
-    private fun archiveOne(old: File, archive: File) {
-        var dest = File(archive, old.name)
-        var n = 1
-        while (dest.exists()) {
-            val base = old.name.removeSuffix(".bin")
-            dest = File(archive, "$base($n).bin")
-            n++
-        }
-        if (!old.renameTo(dest)) {
-            old.copyTo(dest, overwrite = false)
-            old.delete()
-        }
-    }
-
-    /** Archived images for a model, newest first. */
-    fun archived(folder: String): List<File> =
-        archiveDir(folder).listFiles().orEmpty()
-            .filter { it.isFile }
-            .sortedByDescending { it.lastModified() }
-
-    fun clearArchive(folder: String): Int {
-        val files = archived(folder)
-        files.forEach { it.delete() }
-        return files.size
     }
 }
