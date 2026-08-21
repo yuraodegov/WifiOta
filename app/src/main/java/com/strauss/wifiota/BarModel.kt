@@ -3,12 +3,16 @@ package com.strauss.wifiota
 /**
  * The bar models this app knows about.
  *
- * `get_info` reports a short code in `bar_type` - the one confirmed so far is
- * "P3". Everything else in the `codes` lists is a placeholder and must be
- * corrected against real devices before relying on it: guessing wrong here
- * means firmware from the wrong folder gets offered.
+ * `get_info` reports a short code in `bar_type`. Two are confirmed against real
+ * hardware: "S" (Tamar) and "P3" (Primium 3). Anything still marked UNCONFIRMED
+ * is a guess and must be checked on a device before it can be trusted - a wrong
+ * code here means firmware from the wrong folder gets offered for flashing.
  *
- * `folder` is the sub-folder name inside the firmware root the user picks once.
+ * Never add a code "just in case": an extra entry cannot help, and it can make a
+ * bar of one model match another model's folder.
+ *
+ * `folder` is the sub-folder name, both inside the firmware root the user picks
+ * and inside the server manifest, so the two sources stay interchangeable.
  */
 data class BarModel(
     val id: String,
@@ -24,15 +28,17 @@ data class BarModel(
                 name = "Tamar",
                 subtitle = "Countertop",
                 folder = "tamar",
-                // TODO: confirm the bar_type code(s) Tamar reports.
-                codes = listOf("TAMAR", "T1")
+                // CONFIRMED 21/08/2026: a live Tamar running ver_hmi 0.02.132
+                // answered bar_type "S".
+                codes = listOf("S")
             ),
             BarModel(
                 id = "primium1",
                 name = "Primium 1",
                 subtitle = "Under-counter",
                 folder = "primium1",
-                // TODO: confirm.
+                // UNCONFIRMED: no Primium 1 has been queried yet. "P1" only
+                // follows the pattern of "P3" - it has never been observed.
                 codes = listOf("P1")
             ),
             BarModel(
@@ -40,7 +46,8 @@ data class BarModel(
                 name = "Primium 2 / 3",
                 subtitle = "Under-counter",
                 folder = "primium23",
-                // "P3" is confirmed from a real device; P2 is assumed.
+                // "P3" CONFIRMED from a real device. "P2" is UNCONFIRMED and
+                // assumed from the same pattern.
                 codes = listOf("P2", "P3")
             )
         )
