@@ -5,6 +5,7 @@
   user reaches for on every screen.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/app_background"
@@ -201,7 +202,8 @@
                         android:text="@string/update_link"
                         android:textColor="@color/accent"
                         android:textSize="13sp"
-                        android:visibility="gone" />
+                        android:visibility="gone"
+                        tools:visibility="visible" />
 
                     <TextView
                         android:id="@+id/updateStatus"
@@ -255,7 +257,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:orientation="vertical"
-                android:visibility="gone">
+                android:visibility="gone"
+                tools:visibility="gone">
 
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/folderButton"
@@ -275,8 +278,8 @@
                     android:layout_marginTop="14dp"
                     android:background="@drawable/bg_button_primary"
                     android:backgroundTint="@null"
-                    android:stateListAnimator="@null"
                     android:enabled="false"
+                    android:stateListAnimator="@null"
                     android:text="HMI"
                     android:textColor="#FFFFFF"
                     android:textSize="15sp" />
@@ -288,8 +291,8 @@
                     android:layout_marginTop="10dp"
                     android:background="@drawable/bg_button_primary"
                     android:backgroundTint="@null"
-                    android:stateListAnimator="@null"
                     android:enabled="false"
+                    android:stateListAnimator="@null"
                     android:text="ADDON"
                     android:textColor="#FFFFFF"
                     android:textSize="15sp" />
@@ -301,8 +304,8 @@
                     android:layout_marginTop="10dp"
                     android:background="@drawable/bg_button_primary"
                     android:backgroundTint="@null"
-                    android:stateListAnimator="@null"
                     android:enabled="false"
+                    android:stateListAnimator="@null"
                     android:text="RC"
                     android:textColor="#FFFFFF"
                     android:textSize="15sp" />
@@ -331,7 +334,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:orientation="vertical"
-                android:visibility="gone">
+                android:visibility="gone"
+                tools:visibility="gone">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -395,7 +399,8 @@
                 android:layout_marginTop="10dp"
                 android:text="@string/back"
                 android:textColor="@color/helper_blue"
-                android:visibility="gone" />
+                android:visibility="gone"
+                tools:visibility="gone" />
         </LinearLayout>
     </ScrollView>
 
@@ -420,7 +425,8 @@
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="17sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            tools:visibility="visible" />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/flashButton"
@@ -434,6 +440,7 @@
             android:textColor="#FFFFFF"
             android:textSize="17sp"
             android:textStyle="bold"
-            android:visibility="gone" />
+            android:visibility="gone"
+            tools:visibility="gone" />
     </LinearLayout>
 </LinearLayout>
