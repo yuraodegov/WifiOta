@@ -23,28 +23,3 @@
         </shape>
     </item>
 </selector>
-    <?xml version="1.0" encoding="utf-8"?>
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-<item android:state_enabled="false">
-    <shape android:shape="rectangle">
-        <solid android:color="#1B3524" />
-        <corners android:radius="30dp" />
-    </shape>
-</item>
-<item android:state_pressed="true">
-    <shape android:shape="rectangle">
-        <solid android:color="#17692F" />
-        <corners android:radius="30dp" />
-    </shape>
-</item>
-<item>
-    <shape android:shape="rectangle">
-        <!-- Green sweep, lighter on the left. -->
-        <gradient
-            android:angle="0"
-            android:startColor="#2E9E4F"
-            android:endColor="#1E7E39" />
-        <corners android:radius="30dp" />
-    </shape>
-</item>
-</selector>
