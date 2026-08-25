@@ -342,7 +342,8 @@
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_card"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="16dp"
+                    tools:visibility="gone">
 
                     <TextView
                         android:id="@+id/summary"
@@ -418,15 +419,14 @@
             android:id="@+id/searchButton"
             android:layout_width="match_parent"
             android:layout_height="60dp"
-            android:background="@color/ok"
+            android:background="@drawable/bg_button_green"
             android:backgroundTint="@null"
             android:stateListAnimator="@null"
             android:text="@string/connect_button"
             android:textAllCaps="false"
-            android:textColor="#5E35B1"
+            android:textColor="#FFFFFF"
             android:textSize="17sp"
-            android:textStyle="bold"
-            tools:visibility="visible" />
+            android:textStyle="bold" />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/flashButton"
@@ -437,10 +437,10 @@
             android:stateListAnimator="@null"
             android:text="@string/flash"
             android:textAllCaps="false"
-            android:textColor="#5E35B1"
+            android:textColor="#FFFFFF"
             android:textSize="17sp"
             android:textStyle="bold"
-            android:visibility="gone"
-            tools:visibility="gone" />
+            android:visibility="gone" />
+
     </LinearLayout>
 </LinearLayout>
