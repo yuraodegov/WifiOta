@@ -80,6 +80,11 @@
     <string name="hint_fw_url">Firmware server URL</string>
     <string name="hint_fw_sas">SAS token (empty if public)</string>
 
+    <!-- manual model picking, only while nothing is connected -->
+    <string name="selected_badge">SELECTED</string>
+    <string name="manual_model">Model set by hand: %1$s</string>
+    <string name="clear_choice">Clear choice</string>
+
     <!-- dialogs -->
     <string name="close">Close</string>
     <string name="clear">Clear</string>

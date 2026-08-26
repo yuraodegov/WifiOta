@@ -19,7 +19,12 @@ data class BarModel(
     val name: String,
     val subtitle: String,
     val folder: String,
-    val codes: List<String>
+    val codes: List<String>,
+    /**
+     * Drawable resource for the device photo, or 0 when none is bundled.
+     * Kept as a plain res id so BarModel stays free of Android context.
+     */
+    val photo: Int = 0
 ) {
     companion object {
         val ALL = listOf(
@@ -30,7 +35,8 @@ data class BarModel(
                 folder = "tamar",
                 // CONFIRMED 21/08/2026: a live Tamar running ver_hmi 0.02.132
                 // answered bar_type "S".
-                codes = listOf("S")
+                codes = listOf("S"),
+                photo = R.drawable.photo_tamar
             ),
             BarModel(
                 id = "primium1",
@@ -39,7 +45,8 @@ data class BarModel(
                 folder = "primium1",
                 // UNCONFIRMED: no Primium 1 has been queried yet. "P1" only
                 // follows the pattern of "P3" - it has never been observed.
-                codes = listOf("P1")
+                codes = listOf("P1"),
+                photo = R.drawable.photo_primium1
             ),
             BarModel(
                 id = "primium23",
@@ -48,7 +55,8 @@ data class BarModel(
                 folder = "primium23",
                 // "P3" CONFIRMED from a real device. "P2" is UNCONFIRMED and
                 // assumed from the same pattern.
-                codes = listOf("P2", "P3")
+                codes = listOf("P2", "P3"),
+                photo = R.drawable.photo_primium23
             )
         )
 

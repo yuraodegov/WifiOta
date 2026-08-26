@@ -78,6 +78,17 @@ class MainActivity : AppCompatActivity() {
     /** Model resolved from the bar's own report, once it is connected. */
     private var model: BarModel? = null
 
+    /**
+     * Model the user picked by hand while no bar was connected.
+     *
+     * Only ever a stand-in. The moment a bar answers, its own bar_type wins and
+     * this is cleared: the device knows what it is, the user is guessing.
+     */
+    private var manualModel: BarModel? = null
+
+    /** Detected model if there is one, otherwise the hand-picked stand-in. */
+    private val activeModel: BarModel? get() = model ?: manualModel
+
     /** Kept in memory, shown on demand - the log is for diagnosis, not decoration. */
     private val logLines = StringBuilder()
 
@@ -284,7 +295,14 @@ class MainActivity : AppCompatActivity() {
         } ?: log("Bar did not report its versions")
 
         model = BarModel.forBarType(deviceInfo?.barType)
-        model?.let { log("Model: ${it.name} (folder \"${it.folder}\")") }
+        model?.let {
+            log("Model: ${it.name} (folder \"${it.folder}\")")
+            // The bar has spoken - drop whatever was picked by hand.
+            if (manualModel != null && manualModel != it) {
+                log("Manual choice \"${manualModel?.name}\" replaced by the bar's own type")
+            }
+            manualModel = null
+        }
             ?: log("Unknown bar_type \"${deviceInfo?.barType}\" - no folder mapping")
         rescan()
 
@@ -390,7 +408,7 @@ class MainActivity : AppCompatActivity() {
      * model's firmware is exactly the failure worth avoiding here.
      */
     private fun rescan() {
-        val folder = model?.folder
+        val folder = activeModel?.folder
         lifecycleScope.launch {
             val downloaded = folder != null &&
                     withContext(Dispatchers.IO) { store.hasAnything(folder) }
@@ -423,7 +441,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val wanted = model?.folder
+        val wanted = activeModel?.folder
         val dir = if (wanted == null) root else {
             val sub = withContext(Dispatchers.IO) {
                 root.listFiles().firstOrNull {
@@ -484,7 +502,7 @@ class MainActivity : AppCompatActivity() {
 
                 // Connected: only this bar's model. Not connected: everything,
                 // so the phone can be filled up before going out to a site.
-                val folders = model?.let { listOf(it.folder) }
+                val folders = activeModel?.let { listOf(it.folder) }
                     ?: catalog.models.keys.toList()
 
                 var installed = 0
@@ -807,7 +825,17 @@ class MainActivity : AppCompatActivity() {
      * Device list. Once a bar is connected only that one is shown - there is no
      * point offering a choice the app has already made from the bar's report.
      */
+    /**
+     * The device list, doubling as a model picker while nothing is connected.
+     *
+     * Tapping a row is only allowed when no bar has answered yet. It exists so
+     * firmware can be downloaded and reviewed before going out to a site - it is
+     * NOT a way to override a connected bar, because bar_type comes from the
+     * device itself and a hand-picked model would silently offer the wrong
+     * folder's images.
+     */
     private fun showModels() {
+        val connected = model != null
         val shown = model?.let { listOf(it) } ?: BarModel.ALL
 
         val container = LinearLayout(this).apply {
@@ -815,23 +843,65 @@ class MainActivity : AppCompatActivity() {
             setPadding(40, 20, 40, 10)
         }
 
+        lateinit var dialog: AlertDialog
+
         shown.forEach { m ->
             val row = layoutInflater.inflate(R.layout.item_model, container, false)
             row.findViewById<TextView>(R.id.modelName).text = m.name
             row.findViewById<TextView>(R.id.modelSubtitle).text = m.subtitle
-            row.findViewById<TextView>(R.id.modelFolder).text = getString(R.string.folder_label, m.folder)
-            row.findViewById<TextView>(R.id.modelBadge).text =
-                if (model != null) getString(R.string.connected_badge) else ""
-            // Photos are not available yet; the placeholder background stands in.
-            row.findViewById<ImageView>(R.id.modelPhoto).setImageDrawable(null)
+            row.findViewById<TextView>(R.id.modelFolder).text =
+                getString(R.string.folder_label, m.folder)
+
+            row.findViewById<TextView>(R.id.modelBadge).text = when {
+                connected -> getString(R.string.connected_badge)
+                m == manualModel -> getString(R.string.selected_badge)
+                else -> ""
+            }
+
+            val photo = row.findViewById<ImageView>(R.id.modelPhoto)
+            if (m.photo != 0) {
+                photo.setImageResource(m.photo)
+                // Product shots are wider than tall; cropping would cut the
+                // sides off the device, so fit the whole thing in the square.
+                photo.scaleType = ImageView.ScaleType.FIT_CENTER
+            } else {
+                // No photo bundled yet - the placeholder background stands in.
+                photo.setImageDrawable(null)
+            }
+
+            if (!connected) {
+                row.setOnClickListener {
+                    manualModel = m
+                    log("Model picked by hand: ${m.name} (folder \"${m.folder}\")")
+                    updateStatus.text = getString(R.string.manual_model, m.name)
+                    rescan()
+                    dialog.dismiss()
+                }
+            }
+
             container.addView(row)
         }
 
         val scroll = ScrollView(this).apply { addView(container) }
-        AlertDialog.Builder(this)
-            .setTitle(getString(if (model != null) R.string.connected_device else R.string.supported_devices))
+        dialog = AlertDialog.Builder(this)
+            .setTitle(
+                getString(
+                    if (connected) R.string.connected_device else R.string.supported_devices
+                )
+            )
             .setView(scroll)
             .setPositiveButton(getString(R.string.close), null)
+            .apply {
+                // Only offer to undo a choice that actually exists.
+                if (!connected && manualModel != null) {
+                    setNeutralButton(getString(R.string.clear_choice)) { _, _ ->
+                        manualModel = null
+                        log("Manual model choice cleared")
+                        updateStatus.text = ""
+                        rescan()
+                    }
+                }
+            }
             .show()
     }
 

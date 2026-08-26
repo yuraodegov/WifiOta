@@ -74,6 +74,10 @@
     <string name="hint_fw_url">כתובת שרת הגרסאות</string>
     <string name="hint_fw_sas">אסימון SAS (ריק אם הגישה ציבורית)</string>
 
+    <string name="selected_badge">נבחר</string>
+    <string name="manual_model">הדגם נבחר ידנית: %1$s</string>
+    <string name="clear_choice">ביטול הבחירה</string>
+
     <string name="close">סגירה</string>
     <string name="clear">ניקוי</string>
     <string name="save">שמירה</string>

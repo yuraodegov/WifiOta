@@ -94,5 +94,6 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="24dp"
             android:text="@string/lang_iw" />
+
     </RadioGroup>
 </LinearLayout>
