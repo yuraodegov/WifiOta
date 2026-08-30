@@ -46,7 +46,7 @@ data class BarModel(
                 // UNCONFIRMED: no Primium 1 has been queried yet. "P1" only
                 // follows the pattern of "P3" - it has never been observed.
                 codes = listOf("P1"),
-                photo = R.drawable.photo_primium1
+                photo = R.drawable.photo_premium1
             ),
             BarModel(
                 id = "primium23",
@@ -56,7 +56,7 @@ data class BarModel(
                 // "P3" CONFIRMED from a real device. "P2" is UNCONFIRMED and
                 // assumed from the same pattern.
                 codes = listOf("P2", "P3"),
-                photo = R.drawable.photo_primium23
+                photo = R.drawable.photo_premium23
             )
         )
 
