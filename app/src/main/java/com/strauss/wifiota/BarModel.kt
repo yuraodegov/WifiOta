@@ -29,30 +29,30 @@ data class BarModel(
     companion object {
         val ALL = listOf(
             BarModel(
-                id = "tamar",
+                id = "Tamar",
                 name = "Tamar",
                 subtitle = "Countertop",
-                folder = "tamar",
+                folder = "Tamar",
                 // CONFIRMED 21/08/2026: a live Tamar running ver_hmi 0.02.132
                 // answered bar_type "S".
                 codes = listOf("S"),
                 photo = R.drawable.photo_tamar
             ),
             BarModel(
-                id = "primium1",
-                name = "Primium 1",
+                id = "premium1",
+                name = "Premium 1",
                 subtitle = "Under-counter",
-                folder = "primium1",
-                // UNCONFIRMED: no Primium 1 has been queried yet. "P1" only
+                folder = "premium1",
+                // UNCONFIRMED: no Premium 1 has been queried yet. "P1" only
                 // follows the pattern of "P3" - it has never been observed.
                 codes = listOf("P1"),
                 photo = R.drawable.photo_premium1
             ),
             BarModel(
-                id = "primium23",
-                name = "Primium 2 / 3",
+                id = "premium23",
+                name = "Premium 2 / 3",
                 subtitle = "Under-counter",
-                folder = "primium23",
+                folder = "premium23",
                 // "P3" CONFIRMED from a real device. "P2" is UNCONFIRMED and
                 // assumed from the same pattern.
                 codes = listOf("P2", "P3"),
