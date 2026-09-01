@@ -10,6 +10,22 @@ import okhttp3.RequestBody
 import okio.BufferedSink
 import java.util.concurrent.TimeUnit
 
+/**
+ * How the upload URL is built. The two bar families disagree on this and there
+ * is no way to tell from the outside - both answer get_info on the same path.
+ *
+ * QUERY is what every bar up to Primium 3 expects. PATH is what element-2
+ * (Primium 2) expects; sending QUERY to it gets HTTP 405, because the handler
+ * is registered for the slash form and the request never reaches it.
+ */
+enum class OtaFormat {
+    /** /ota/upload?version=..&sha256=..&component=..&transactionComplete=true */
+    QUERY,
+
+    /** /ota/upload/version=..&sha256=..  - no component, no transactionComplete. */
+    PATH
+}
+
 /** What actually happened to an upload attempt. */
 enum class UploadOutcome {
     /** The bar answered "uploaded successfully". */
@@ -114,17 +130,27 @@ class OtaClient(network: Network, private val host: String) {
         sha: String,
         component: String,
         transactionComplete: Boolean,
+        format: OtaFormat,
         onProgress: (Int) -> Unit
     ): Attempt {
-        val url = HttpUrl.Builder()
-            .scheme("http").host(host).encodedPath(UPLOAD_PATH)
-            .addQueryParameter("version", version)
-            .addQueryParameter("sha256", sha)
-            .apply {
-                if (component.isNotEmpty()) addQueryParameter("component", component)
-                if (transactionComplete) addQueryParameter("transactionComplete", "true")
-            }
-            .build()
+        val url: String = when (format) {
+            OtaFormat.QUERY -> HttpUrl.Builder()
+                .scheme("http").host(host).encodedPath(UPLOAD_PATH)
+                .addQueryParameter("version", version)
+                .addQueryParameter("sha256", sha)
+                .apply {
+                    if (component.isNotEmpty()) addQueryParameter("component", component)
+                    if (transactionComplete) addQueryParameter("transactionComplete", "true")
+                }
+                .build()
+                .toString()
+
+            // Built by hand on purpose: the parameters live in the PATH here,
+            // separated by "&", which no URL builder would produce. Confirmed
+            // on a live Primium 2 - the same request with "?" returns 405.
+            OtaFormat.PATH ->
+                "http://$host$UPLOAD_PATH/version=$version&sha256=$sha"
+        }
 
         var sentAll = false
         val body = ProgressBody(bytes) { percent ->
@@ -148,18 +174,24 @@ class OtaClient(network: Network, private val host: String) {
         sha: String,
         component: String,
         transactionComplete: Boolean,
+        format: OtaFormat,
         autoRetry: Boolean,
         onProgress: (Int) -> Unit,
         onWait: (Int) -> Unit,
         log: (String) -> Unit
     ): UploadOutcome {
         val attempts = if (autoRetry) RETRY_ON_500 + 1 else 1
-        log("Sending ${bytes.size / 1024} KB  component=${component.ifEmpty { "(none)" }} version=$version")
+        log(
+            "Sending ${bytes.size / 1024} KB  component=${component.ifEmpty { "(none)" }} " +
+                    "version=$version format=$format"
+        )
 
         for (i in 1..attempts) {
             log("Attempt $i/$attempts...")
             onProgress(0)
-            val a = uploadOnce(bytes, version, sha, component, transactionComplete, onProgress)
+            val a = uploadOnce(
+                bytes, version, sha, component, transactionComplete, format, onProgress
+            )
 
             when {
                 a.accepted -> {
@@ -172,7 +204,7 @@ class OtaClient(network: Network, private val host: String) {
                 // hammer a device that is already busy, or a dead AP.
                 a.code == null && a.fullySent -> {
                     log("All bytes sent, then the link closed (${a.body}). " +
-                        "The bar has the image and is writing it.")
+                            "The bar has the image and is writing it.")
                     return UploadOutcome.DELIVERED_UNCONFIRMED
                 }
 

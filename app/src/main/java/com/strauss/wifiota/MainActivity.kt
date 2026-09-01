@@ -701,6 +701,9 @@ class MainActivity : AppCompatActivity() {
                         sha = sha,
                         component = if (isRc) "" else component,
                         transactionComplete = tc,
+                        // Falls back to QUERY when the model is unknown: that is
+                        // what every bar except Primium 2 expects.
+                        format = activeModel?.otaFormat ?: OtaFormat.QUERY,
                         autoRetry = retry,
                         onProgress = { percent ->
                             lifecycleScope.launch {

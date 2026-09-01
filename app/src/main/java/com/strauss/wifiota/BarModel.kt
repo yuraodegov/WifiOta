@@ -24,7 +24,9 @@ data class BarModel(
      * Drawable resource for the device photo, or 0 when none is bundled.
      * Kept as a plain res id so BarModel stays free of Android context.
      */
-    val photo: Int = 0
+    val photo: Int = 0,
+    /** Which upload URL shape this family expects. */
+    val otaFormat: OtaFormat = OtaFormat.QUERY
 ) {
     companion object {
         val ALL = listOf(
@@ -49,15 +51,25 @@ data class BarModel(
                 photo = R.drawable.photo_premium1
             ),
             BarModel(
-                id = "premium23",
-                name = "Premium 2 / 3",
+                id = "premium2",
+                name = "Premium 2",
                 subtitle = "Under-counter",
-                folder = "premium23",
-                // "P3" CONFIRMED from a real device. "P2" is UNCONFIRMED and
-                // assumed from the same pattern.
-                codes = listOf("P2", "P3"),
+                folder = "premium2",
+                // CONFIRMED 31/08/2026 on live hardware. This board reports a
+                // much richer get_info (ver_comm, telemetry) than the others.
+                codes = listOf("element-2"),
+                // Uploads with the parameters in the path; "?" returns 405.
+                otaFormat = OtaFormat.PATH
+            ),
+            BarModel(
+                id = "premium3",
+                name = "Peimium 3",
+                subtitle = "Under-counter",
+                folder = "premium3",
+                // "P3" confirmed on a real device.
+                codes = listOf("P3"),
                 photo = R.drawable.photo_premium23
-            )
+            ),
         )
 
         /** Matches a reported bar_type to a model, ignoring case and spacing. */
