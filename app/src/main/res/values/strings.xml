@@ -110,4 +110,17 @@
     <string name="language">Language</string>
     <string name="lang_en">English</string>
     <string name="lang_iw">עברית</string>
+
+    <!-- PILOT v1: bundled firmware and the AP Mode gate -->
+    <string name="menu">Menu</string>
+    <string name="bundled_source">In app: %1$s v%2$s</string>
+    <string name="bundled_missing">No firmware in this build</string>
+    <string name="no_firmware_for_model">No firmware in this build for %1$s</string>
+    <string name="pilot_ready">Ready to flash.</string>
+    <string name="sha_mismatch">Checksum mismatch - this build is corrupted. Do not flash.</string>
+    <string name="ap_dialog_title">Is AP Mode active on the water bar?</string>
+    <string name="ap_dialog_body">AP Mode must be switched on at the water bar before connecting.</string>
+    <string name="ap_dialog_yes">Yes, continue</string>
+    <string name="ap_dialog_show">Show instructions</string>
+    <string name="ap_guide_title">Switching on AP Mode</string>
 </resources>

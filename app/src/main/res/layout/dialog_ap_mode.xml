@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AP Mode confirmation, shown before every connection attempt.
+
+  The card draws its own background, so the hosting dialog window must be made
+  transparent in code - otherwise the default square dialog shows behind these
+  rounded corners.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="16dp"
+    android:layout_marginEnd="16dp"
+    android:background="@drawable/bg_dialog_card"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <ImageButton
+        android:id="@+id/apClose"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_gravity="end"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/close"
+        android:padding="6dp"
+        android:src="@drawable/ic_close"
+        app:tint="@color/text_secondary" />
+
+    <ImageView
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="4dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_wifi"
+        app:tint="@color/text_primary" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:text="@string/ap_dialog_title"
+        android:textColor="@color/text_primary"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:lineSpacingExtra="4dp"
+        android:text="@string/ap_dialog_body"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <!--
+      Two actions, side by side. "Show instructions" is the outlined one on
+      purpose: most of the time AP Mode is already on, so the confirming button
+      carries the emphasis and the guide stays one tap away for the rest.
+    -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:orientation="horizontal">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/apYes"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_button_primary"
+            android:backgroundTint="@null"
+            android:stateListAnimator="@null"
+            android:text="@string/ap_dialog_yes"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/apShow"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_button_ghost"
+            android:backgroundTint="@null"
+            android:stateListAnimator="@null"
+            android:text="@string/ap_dialog_show"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp" />
+    </LinearLayout>
+</LinearLayout>

@@ -5,6 +5,7 @@
   user reaches for on every screen.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -32,29 +33,19 @@
                 android:gravity="end"
                 android:orientation="horizontal">
 
-                <Button
-                    android:id="@+id/logButton"
+                <!-- PILOT v1: Log and Setup moved behind this menu. The two
+                     borderless buttons that used to sit here are gone from the
+                     layout only - showMenu() opens the same two dialogs. -->
+                <ImageButton
+                    android:id="@+id/menuButton"
                     style="?android:attr/borderlessButtonStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:minWidth="0dp"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:text="@string/log"
-                    android:textColor="@color/helper_blue"
-                    android:textSize="13sp" />
-
-                <Button
-                    android:id="@+id/settingsButton"
-                    style="?android:attr/borderlessButtonStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:minWidth="0dp"
-                    android:paddingStart="10dp"
-                    android:paddingEnd="10dp"
-                    android:text="@string/setup"
-                    android:textColor="@color/helper_blue"
-                    android:textSize="13sp" />
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/menu"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_menu"
+                    app:tint="@color/text_primary" />
             </LinearLayout>
 
             <LinearLayout
@@ -183,6 +174,9 @@
                         android:textColor="@color/text_primary"
                         android:textSize="15sp" />
 
+                    <!-- PILOT v1: hidden. Firmware comes from the APK, so
+                         there is no folder for the user to choose. Restore by
+                         removing the visibility line. -->
                     <TextView
                         android:id="@+id/folderLink"
                         android:layout_width="wrap_content"
@@ -190,7 +184,9 @@
                         android:layout_marginTop="10dp"
                         android:text="@string/choose_folder"
                         android:textColor="@color/accent"
-                        android:textSize="13sp" />
+                        android:textSize="13sp"
+                        android:visibility="gone"
+                        tools:visibility="gone" />
 
                     <!-- Hidden until a server URL is set in Setup. Long press
                          opens the archive of replaced images. -->
@@ -260,6 +256,7 @@
                 android:visibility="gone"
                 tools:visibility="gone">
 
+                <!-- PILOT v1: hidden - firmware is bundled, no folder to pick -->
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/folderButton"
                     android:layout_width="match_parent"
@@ -269,7 +266,8 @@
                     android:stateListAnimator="@null"
                     android:text="@string/firmware_folder"
                     android:textColor="@color/text_primary"
-                    android:textSize="14sp" />
+                    android:textSize="14sp" android:visibility="gone"
+                    tools:visibility="gone" />
 
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/hmiButton"
@@ -284,6 +282,7 @@
                     android:textColor="#FFFFFF"
                     android:textSize="15sp" />
 
+                <!-- PILOT v1: hidden - HMI only for the first field build -->
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/addonButton"
                     android:layout_width="match_parent"
@@ -295,8 +294,10 @@
                     android:stateListAnimator="@null"
                     android:text="ADDON"
                     android:textColor="#FFFFFF"
-                    android:textSize="15sp" />
+                    android:textSize="15sp" android:visibility="gone"
+                    tools:visibility="gone" />
 
+                <!-- PILOT v1: hidden - HMI only for the first field build -->
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/rcButton"
                     android:layout_width="match_parent"
@@ -308,10 +309,12 @@
                     android:stateListAnimator="@null"
                     android:text="RC"
                     android:textColor="#FFFFFF"
-                    android:textSize="15sp" />
+                    android:textSize="15sp" android:visibility="gone"
+                    tools:visibility="gone" />
 
                 <!-- Escape hatch: pick any .bin by hand, including an older one.
                      Red because going backwards is not a routine action. -->
+                <!-- PILOT v1: hidden - no hand-picked files in the field -->
                 <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/manualButton"
                     android:layout_width="match_parent"
@@ -323,7 +326,8 @@
                     android:text="@string/force_install"
                     android:textAllCaps="false"
                     android:textColor="@color/danger"
-                    android:textSize="15sp" />
+                    android:textSize="15sp" android:visibility="gone"
+                    tools:visibility="gone" />
 
             </LinearLayout>
 

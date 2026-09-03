@@ -32,6 +32,17 @@ sealed class FwSource {
         override val name: String get() = file.name
         override fun open(context: Context): InputStream = file.inputStream()
     }
+
+    /**
+     * Bundled into the APK from the project's firmware/ folder.
+     *
+     * Read-only and fixed at build time, which is the whole point: for the
+     * field pilot the image cannot be swapped, mislaid or downloaded wrong.
+     */
+    class Asset(private val assetPath: String) : FwSource() {
+        override val name: String get() = assetPath.substringAfterLast('/')
+        override fun open(context: Context): InputStream = context.assets.open(assetPath)
+    }
 }
 
 /**

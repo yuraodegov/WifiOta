@@ -3,7 +3,10 @@ package com.strauss.wifiota
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
+import androidx.appcompat.widget.PopupMenu
 import android.net.Uri
 import android.net.wifi.WifiManager
 import android.provider.Settings
@@ -89,6 +92,9 @@ class MainActivity : AppCompatActivity() {
     /** Detected model if there is one, otherwise the hand-picked stand-in. */
     private val activeModel: BarModel? get() = model ?: manualModel
 
+    /** The image shipped inside this APK. Null when the build has none. */
+    private var bundled: BundledFirmware? = null
+
     /** Kept in memory, shown on demand - the log is for diagnosis, not decoration. */
     private val logLines = StringBuilder()
 
@@ -136,17 +142,25 @@ class MainActivity : AppCompatActivity() {
         barNetwork = BarNetwork(this)
         store = FirmwareStore(this)
 
-        findViewById<Button>(R.id.settingsButton).setOnClickListener { showSettings() }
-        findViewById<Button>(R.id.logButton).setOnClickListener { showLog() }
+        // Setup and Log used to sit on the home screen. For the pilot they live
+        // behind the hamburger so a technician sees one action and no clutter.
+        findViewById<View>(R.id.menuButton).setOnClickListener { showMenu(it) }
+
         findViewById<Button>(R.id.folderButton).setOnClickListener { pickFolder.launch(null) }
         findViewById<TextView>(R.id.folderLink).setOnClickListener { pickFolder.launch(null) }
-        findViewById<TextView>(R.id.instructionsLink).setOnClickListener { showModels() }
+        // Pilot: this link opens the AP Mode guide. The device list it used to
+        // show is only useful when firmware comes from folders.
+        findViewById<TextView>(R.id.instructionsLink).setOnClickListener {
+            if (Pilot.V1) showInstructions() else showModels()
+        }
         updateLink.setOnClickListener { checkForUpdates() }
         // Long press is the way to the archive: needed rarely, and it must not
         // sit next to the update link where it can be hit by accident.
         updateLink.setOnLongClickListener { showArchive(); true }
 
-        searchButton.setOnClickListener { connect() }
+        // Connecting now starts with a question: AP Mode has to be on at the
+        // bar first, and nothing the app does can check that for the user.
+        searchButton.setOnClickListener { if (Pilot.V1) askApMode() else connect() }
         hmiButton.setOnClickListener { choose("hmi") }
         addonButton.setOnClickListener { choose("fizzz") }
         rcButton.setOnClickListener { choose("rc") }
@@ -156,6 +170,12 @@ class MainActivity : AppCompatActivity() {
         }
         flashButton.setOnClickListener { flash() }
         backButton.setOnClickListener { goTo(step - 1) }
+
+        if (Pilot.V1) {
+            val (fw, detail) = BundledFirmware.load(this)
+            bundled = fw
+            log(if (fw != null) "Bundled firmware: $detail" else "[ERROR] Bundled firmware: $detail")
+        }
 
         goTo(1)
         rescan()
@@ -408,6 +428,11 @@ class MainActivity : AppCompatActivity() {
      * model's firmware is exactly the failure worth avoiding here.
      */
     private fun rescan() {
+        if (Pilot.V1) {
+            rescanBundled()
+            return
+        }
+
         val folder = activeModel?.folder
         lifecycleScope.launch {
             val downloaded = folder != null &&
@@ -426,6 +451,65 @@ class MainActivity : AppCompatActivity() {
             if (step == 2) stepHint.text = describeAll()
             refreshUpdateLink()
         }
+    }
+
+    /**
+     * Pilot source: whatever was built into the APK, and nothing else.
+     *
+     * No scanning and no I/O - the manifest was read once at startup. The only
+     * thing that can change here is which bar is connected, and that decides
+     * whether the image is allowed to be offered at all.
+     */
+    private fun rescanBundled() {
+        val fw = bundled
+        firmware = Firmware.Set(hmi = fw?.source())
+        folderStatus.text = if (fw == null) getString(R.string.bundled_missing)
+        else getString(R.string.bundled_source, fw.model, fw.version)
+
+        refreshFirmwareButtons()
+        if (step == 2) stepHint.text = describeAll()
+    }
+
+    /**
+     * The one firmware button of the pilot build.
+     *
+     * The model guard is the important part. A bundled image belongs to exactly
+     * one model, so it is only offered once a bar has answered and reported
+     * that same model. An unknown bar_type counts as a mismatch: the app must
+     * not flash a Tamar image into something it could not identify.
+     */
+    private fun refreshBundledButton() {
+        val fw = bundled
+        val white = 0xFFFFFFFF.toInt()
+
+        if (fw == null) {
+            hmiButton.text = getString(R.string.bundled_missing)
+            hmiButton.setTextColor(resources.getColor(R.color.text_muted, theme))
+            hmiButton.isEnabled = false
+            return
+        }
+
+        // Nothing connected yet: show what the build carries, but leave it
+        // inert - there is no bar to flash it into.
+        if (deviceInfo == null) {
+            hmiButton.text = "${fw.component.uppercase()}  v${fw.version}"
+            hmiButton.setTextColor(white)
+            hmiButton.isEnabled = false
+            return
+        }
+
+        if (!fw.matches(model)) {
+            val what = model?.name ?: deviceInfo?.barType.orEmpty().ifBlank {
+                getString(R.string.unknown)
+            }
+            hmiButton.text = getString(R.string.no_firmware_for_model, what)
+            hmiButton.setTextColor(resources.getColor(R.color.warn, theme))
+            hmiButton.isEnabled = false
+            log("Bundled image is for ${fw.model}, bar reports \"$what\" - flashing blocked")
+            return
+        }
+
+        applyLabel(hmiButton, fw.component.uppercase(), fw.source(), fw.component, fw.version)
     }
 
     /**
@@ -597,7 +681,18 @@ class MainActivity : AppCompatActivity() {
      * an unplugged addon reports an empty version - the button stays available
      * rather than pretending to know.
      */
-    private fun applyLabel(button: Button, title: String, file: FwSource?, which: String) {
+    private fun applyLabel(
+        button: Button,
+        title: String,
+        file: FwSource?,
+        which: String,
+        /**
+         * Version stated by the manifest. Preferred over the filename when it
+         * is there: the manifest is what the build was checked against, the
+         * filename is only a convention someone can break.
+         */
+        knownVersion: String? = null
+    ) {
         val name = file?.name
         if (name == null) {
             button.text = "$title - " + getString(R.string.none_found)
@@ -606,7 +701,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val fileVer = Firmware.versionFromName(name, which).ifEmpty { "?" }
+        val fileVer = knownVersion ?: Firmware.versionFromName(name, which).ifEmpty { "?" }
         val installed = deviceInfo?.installedVersion(which)
 
         if (installed == null) {
@@ -629,6 +724,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshFirmwareButtons() {
+        if (Pilot.V1) {
+            refreshBundledButton()
+            return
+        }
         applyLabel(hmiButton, "HMI", firmware.hmi, "hmi")
         applyLabel(addonButton, "ADDON", firmware.addon, "fizzz")
         applyLabel(rcButton, "RC", firmware.rc, "rc")
@@ -645,10 +744,16 @@ class MainActivity : AppCompatActivity() {
         else "${name ?: "Folder"} - ${found.joinToString(", ")}"
     }
 
-    private fun describeAll(): String =
-        if (firmware.hmi == null && firmware.addon == null && firmware.rc == null)
+    private fun describeAll(): String {
+        if (Pilot.V1) {
+            val fw = bundled ?: return getString(R.string.bundled_missing)
+            return if (fw.matches(model)) getString(R.string.pilot_ready)
+            else getString(R.string.no_firmware_for_model, model?.name ?: getString(R.string.unknown))
+        }
+        return if (firmware.hmi == null && firmware.addon == null && firmware.rc == null)
             getString(R.string.no_bins)
         else getString(R.string.pick_what)
+    }
 
     // STEP 3
     private fun flash() {
@@ -670,6 +775,16 @@ class MainActivity : AppCompatActivity() {
                 }
                 log("$name  sha256 = $sha")
 
+                // The manifest hash is checked against what was actually read
+                // out of the APK. A mismatch means the build is not what it
+                // claims to be, and a bar must never be handed that.
+                val declared = bundled?.takeIf { Pilot.V1 }?.sha256
+                if (declared != null && !declared.equals(sha, ignoreCase = true)) {
+                    progressText.text = getString(R.string.sha_mismatch)
+                    log("[ERROR] sha256 mismatch: manifest says $declared")
+                    return@launch
+                }
+
                 val client = OtaClient(net, host)
                 val (reachable, detail) = withContext(Dispatchers.IO) { client.ping() }
                 if (!reachable) {
@@ -686,7 +801,8 @@ class MainActivity : AppCompatActivity() {
                     log("fota_prepare: $pd")
                 }
 
-                val version = Firmware.versionFromName(name, component)
+                val version = bundled?.takeIf { Pilot.V1 }?.version
+                    ?: Firmware.versionFromName(name, component)
                 val tc = if (isRc) false else prefs().getBoolean("tc", true)
                 val retry = prefs().getBoolean("retry", true)
                 val sizeKb = bytes.size / 1024
@@ -756,6 +872,65 @@ class MainActivity : AppCompatActivity() {
     }
 
     // DIALOGS
+    /**
+     * Everything that is not the main flow: Setup and Log.
+     *
+     * Log stays reachable on purpose. A technician standing at a customer's bar
+     * with a failed flash and no log has nothing to report but "it didn't
+     * work", and we already know boards exist that fail mid-write.
+     */
+    private fun showMenu(anchor: View) {
+        val popup = PopupMenu(this, anchor)
+        popup.menu.add(0, MENU_SETUP, 0, getString(R.string.setup))
+        popup.menu.add(0, MENU_LOG, 1, getString(R.string.log))
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                MENU_SETUP -> { showSettings(); true }
+                MENU_LOG -> { showLog(); true }
+                else -> false
+            }
+        }
+        popup.show()
+    }
+
+    /**
+     * AP Mode has to be switched on at the bar itself, and the app has no way
+     * to check that from outside - an AP that is off simply is not there to
+     * find. So ask, and offer the guide to whoever answers no.
+     */
+    private fun askApMode() {
+        // Wi-Fi off is a different problem; connect() sends the user to the
+        // system panel for it. No point asking about AP Mode first.
+        if (!wifiOn) { connect(); return }
+
+        val view = layoutInflater.inflate(R.layout.dialog_ap_mode, null)
+        val dialog = AlertDialog.Builder(this).setView(view).create()
+        // The layout draws its own rounded card, so the default dialog
+        // background would show as square corners behind it.
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        view.findViewById<View>(R.id.apYes).setOnClickListener {
+            dialog.dismiss()
+            connect()
+        }
+        view.findViewById<View>(R.id.apShow).setOnClickListener {
+            dialog.dismiss()
+            showInstructions()
+        }
+        view.findViewById<View>(R.id.apClose).setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
+    }
+
+    /** Scrollable step-by-step guide for switching the bar into AP Mode. */
+    private fun showInstructions() {
+        val view = layoutInflater.inflate(R.layout.dialog_instructions, null)
+        val dialog = AlertDialog.Builder(this).setView(view).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        view.findViewById<View>(R.id.guideClose).setOnClickListener { dialog.dismiss() }
+        dialog.show()
+    }
+
     private fun showSettings() {
         val view = layoutInflater.inflate(R.layout.dialog_settings, null)
         val ssid = view.findViewById<EditText>(R.id.ssidField)
@@ -933,5 +1108,7 @@ class MainActivity : AppCompatActivity() {
 
     private companion object {
         const val DEFAULT_IP = "192.168.4.1"
+        const val MENU_SETUP = 1
+        const val MENU_LOG = 2
     }
 }

@@ -7,6 +7,9 @@
     <color name="app_background">#0B1622</color>
     <color name="card_background">#122232</color>
     <color name="card_stroke">#1E3547</color>
+    <!-- Dialog surface: a step lighter than the cards so a dialog
+         reads as floating above the screen behind it. -->
+    <color name="dialog_background">#1B2B3B</color>
 
     <color name="text_primary">#E9F3F8</color>
     <color name="text_secondary">#8FA8B8</color>
