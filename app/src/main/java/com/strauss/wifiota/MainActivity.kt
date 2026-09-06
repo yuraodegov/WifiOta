@@ -885,7 +885,14 @@ class MainActivity : AppCompatActivity() {
         popup.menu.add(0, MENU_LOG, 1, getString(R.string.log))
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                MENU_SETUP -> { showSettings(); true }
+                MENU_SETUP -> {
+                    // Setup holds the SSID, the passphrase and the bar address.
+                    // A technician has no reason to be in there, and a wrong
+                    // value here breaks connecting without any visible sign of
+                    // why - so this is the one place the code is asked for.
+                    if (Pilot.V1) requirePin { showSettings() } else showSettings()
+                    true
+                }
                 MENU_LOG -> { showLog(); true }
                 else -> false
             }
@@ -929,6 +936,46 @@ class MainActivity : AppCompatActivity() {
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         view.findViewById<View>(R.id.guideClose).setOnClickListener { dialog.dismiss() }
         dialog.show()
+    }
+
+    /**
+     * Asks for the code, then runs [onOk].
+     *
+     * Asked on every entry rather than remembered for the session. Setup is
+     * opened rarely, so there is nothing to save by remembering it, and a code
+     * that stops appearing after the first time protects nothing.
+     */
+    private fun requirePin(onOk: () -> Unit) {
+        val view = layoutInflater.inflate(R.layout.dialog_pin, null)
+        val input = view.findViewById<EditText>(R.id.pinInput)
+        val error = view.findViewById<TextView>(R.id.pinError)
+
+        val dialog = AlertDialog.Builder(this).setView(view).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        // Bring the keypad up with the dialog: this is a four-digit entry, and
+        // making the user tap the field first is one tap too many.
+        dialog.window?.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE
+        )
+
+        fun submit() {
+            if (input.text.toString() == Pilot.FLASH_PIN) {
+                dialog.dismiss()
+                onOk()
+            } else {
+                error.visibility = View.VISIBLE
+                input.text.clear()
+                log("Setup code rejected")
+            }
+        }
+
+        // Enter on the keypad submits, same as the button.
+        input.setOnEditorActionListener { _, _, _ -> submit(); true }
+        view.findViewById<View>(R.id.pinOk).setOnClickListener { submit() }
+        view.findViewById<View>(R.id.pinCancel).setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
+        input.requestFocus()
     }
 
     private fun showSettings() {

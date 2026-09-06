@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Flash code entry.
+
+  Deliberately plain: four digits, a confirm and a cancel. Anything more here
+  would suggest the code carries more weight than it does - it is a guard
+  against a mis-tap, not an access control.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="16dp"
+    android:layout_marginEnd="16dp"
+    android:background="@drawable/bg_dialog_card"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/pin_title"
+        android:textColor="@color/text_primary"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:text="@string/pin_body"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <!--
+      textPassword with a numeric class: digits stay masked, and the phone
+      still opens the number pad instead of the full keyboard. Set here as
+      well as in code so the layout preview matches what actually runs.
+    -->
+    <EditText
+        android:id="@+id/pinInput"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/bg_field"
+        android:gravity="center"
+        android:imeOptions="actionDone"
+        android:importantForAutofill="no"
+        android:inputType="numberPassword"
+        android:letterSpacing="0.4"
+        android:maxLength="4"
+        android:textColor="@color/text_primary"
+        android:textSize="26sp" />
+
+    <TextView
+        android:id="@+id/pinError"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center"
+        android:text="@string/pin_wrong"
+        android:textColor="@color/warn"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/pinOk"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_button_primary"
+            android:backgroundTint="@null"
+            android:stateListAnimator="@null"
+            android:text="@string/pin_ok"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/pinCancel"
+            android:layout_width="0dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_button_ghost"
+            android:backgroundTint="@null"
+            android:stateListAnimator="@null"
+            android:text="@string/cancel"
+            android:textAllCaps="false"
+            android:textColor="@color/text_primary"
+            android:textSize="15sp" />
+    </LinearLayout>
+</LinearLayout>

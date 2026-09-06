@@ -20,4 +20,13 @@ object Pilot {
      * false - full app: folder picker, server catalog, HMI/ADDON/RC choice.
      */
     const val V1 = true
+
+    /**
+     * Code asked for before Setup opens.
+     *
+     * This keeps a technician out of the network settings by accident, nothing
+     * more, and it should not be described as a security control. It ships
+     * inside the APK, so anyone who unpacks the file can read it.
+     */
+    const val FLASH_PIN = "0000"
 }

@@ -1,6 +1,5 @@
 <resources>
-
-    <string name="app_name">WaterBar Updater V1</string>
+    <string name="app_name">WaterBar Updater</string>
 
     <!-- header -->
     <string name="log">Log</string>
@@ -124,4 +123,10 @@
     <string name="ap_dialog_yes">Yes, continue</string>
     <string name="ap_dialog_show">Show instructions</string>
     <string name="ap_guide_title">Switching on AP Mode</string>
+
+    <!-- PILOT v1: flash code -->
+    <string name="pin_title">Enter code</string>
+    <string name="pin_body">The code is required to open Setup.</string>
+    <string name="pin_ok">Open</string>
+    <string name="pin_wrong">Wrong code</string>
 </resources>

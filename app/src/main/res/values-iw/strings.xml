@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">מעדכן ברי מים V1</string>
+    <string name="app_name">מעדכן ברי מים</string>
 
     <string name="log">יומן</string>
     <string name="setup">הגדרות</string>
@@ -113,4 +113,9 @@
     <string name="ap_dialog_yes">כן, להמשיך</string>
     <string name="ap_dialog_show">הצג הוראות</string>
     <string name="ap_guide_title">הפעלת מצב AP</string>
+
+    <string name="pin_title">הזן קוד</string>
+    <string name="pin_body">נדרש קוד לפתיחת ההגדרות.</string>
+    <string name="pin_ok">פתח</string>
+    <string name="pin_wrong">קוד שגוי</string>
 </resources>
