@@ -29,4 +29,14 @@ object Pilot {
      * inside the APK, so anyone who unpacks the file can read it.
      */
     const val FLASH_PIN = "0000"
+
+    /**
+     * Code asked for once, the first time the app is opened after install.
+     *
+     * Once accepted it is remembered and never asked again - clearing the app's
+     * data or reinstalling brings it back, since that is the only state it has.
+     * Same caveat as above: it is in the APK, so it gates who bothers to open
+     * the app, not who is able to.
+     */
+    const val UNLOCK_PIN = "00000"
 }

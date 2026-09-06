@@ -11,6 +11,7 @@ import android.net.Uri
 import android.net.wifi.WifiManager
 import android.provider.Settings
 import android.os.Bundle
+import android.text.InputFilter
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -179,6 +180,10 @@ class MainActivity : AppCompatActivity() {
 
         goTo(1)
         rescan()
+
+        // Last, so the dialog opens over a screen that is already laid out
+        // rather than a blank one.
+        if (Pilot.V1) requireActivation()
     }
 
     override fun onResume() {
@@ -890,7 +895,14 @@ class MainActivity : AppCompatActivity() {
                     // A technician has no reason to be in there, and a wrong
                     // value here breaks connecting without any visible sign of
                     // why - so this is the one place the code is asked for.
-                    if (Pilot.V1) requirePin { showSettings() } else showSettings()
+                    if (Pilot.V1) requirePin(
+                        pin = Pilot.FLASH_PIN,
+                        iconRes = R.drawable.ic_settings,
+                        titleRes = R.string.pin_title_setup,
+                        bodyRes = R.string.pin_body,
+                        okRes = R.string.pin_ok,
+                        accentRes = R.color.warn
+                    ) { showSettings() } else showSettings()
                     true
                 }
                 MENU_LOG -> { showLog(); true }
@@ -939,43 +951,98 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Asks for the code, then runs [onOk].
+     * Asks for [pin], then runs [onOk].
      *
-     * Asked on every entry rather than remembered for the session. Setup is
-     * opened rarely, so there is nothing to save by remembering it, and a code
-     * that stops appearing after the first time protects nothing.
+     * Nothing is remembered between calls: whether an accepted code should stick
+     * is the caller's business, not this dialog's. [onCancel] runs when the user
+     * backs out, which the activation gate uses to close the app - there is
+     * nothing to show behind it.
      */
-    private fun requirePin(onOk: () -> Unit) {
+    private fun requirePin(
+        pin: String,
+        iconRes: Int,
+        titleRes: Int,
+        bodyRes: Int,
+        okRes: Int,
+        accentRes: Int,
+        cancellable: Boolean = true,
+        onCancel: () -> Unit = {},
+        onOk: () -> Unit
+    ) {
         val view = layoutInflater.inflate(R.layout.dialog_pin, null)
         val input = view.findViewById<EditText>(R.id.pinInput)
         val error = view.findViewById<TextView>(R.id.pinError)
+        val okButton = view.findViewById<Button>(R.id.pinOk)
+        val cancelButton = view.findViewById<Button>(R.id.pinCancel)
+        val icon = view.findViewById<ImageView>(R.id.pinIcon)
+
+        // Icon, title and accent colour are what separate the two gates. The
+        // wording alone is not enough - people recognise a dialog by its shape
+        // long before they read it.
+        icon.setImageResource(iconRes)
+        icon.setColorFilter(resources.getColor(accentRes, theme))
+        view.findViewById<TextView>(R.id.pinTitle).setText(titleRes)
+        view.findViewById<TextView>(R.id.pinBody).setText(bodyRes)
+        okButton.setText(okRes)
+        // Length comes from the code itself, so the two gates can differ in
+        // length without the layout knowing anything about either.
+        input.filters = arrayOf(InputFilter.LengthFilter(pin.length))
 
         val dialog = AlertDialog.Builder(this).setView(view).create()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        // Bring the keypad up with the dialog: this is a four-digit entry, and
-        // making the user tap the field first is one tap too many.
+        // Bring the keypad up with the dialog: this is a few digits, and making
+        // the user tap the field first is one tap too many.
         dialog.window?.setSoftInputMode(
             WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE
         )
+        dialog.setCanceledOnTouchOutside(cancellable)
+        dialog.setCancelable(cancellable)
+        cancelButton.visibility = if (cancellable) View.VISIBLE else View.GONE
+        dialog.setOnCancelListener { onCancel() }
 
         fun submit() {
-            if (input.text.toString() == Pilot.FLASH_PIN) {
+            if (input.text.toString() == pin) {
                 dialog.dismiss()
                 onOk()
             } else {
                 error.visibility = View.VISIBLE
                 input.text.clear()
-                log("Setup code rejected")
+                log("Code rejected")
             }
         }
 
         // Enter on the keypad submits, same as the button.
         input.setOnEditorActionListener { _, _, _ -> submit(); true }
-        view.findViewById<View>(R.id.pinOk).setOnClickListener { submit() }
-        view.findViewById<View>(R.id.pinCancel).setOnClickListener { dialog.dismiss() }
+        okButton.setOnClickListener { submit() }
+        cancelButton.setOnClickListener { dialog.dismiss(); onCancel() }
 
         dialog.show()
         input.requestFocus()
+    }
+
+    /**
+     * One-time activation, checked before anything else is usable.
+     *
+     * The accepted state lives in the same preferences as the rest of the
+     * settings, so uninstalling or clearing app data asks again - which is the
+     * intended behaviour, not a gap.
+     */
+    private fun requireActivation() {
+        if (prefs().getBoolean("activated", false)) return
+
+        requirePin(
+            pin = Pilot.UNLOCK_PIN,
+            iconRes = R.drawable.ic_lock,
+            titleRes = R.string.pin_title_activate,
+            bodyRes = R.string.pin_body_activate,
+            okRes = R.string.pin_activate,
+            accentRes = R.color.accent,
+            cancellable = false,
+            onCancel = { finish() }
+        ) {
+            prefs().edit().putBoolean("activated", true).apply()
+            log("Activated")
+        }
     }
 
     private fun showSettings() {

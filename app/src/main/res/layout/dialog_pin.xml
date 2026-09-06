@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Flash code entry.
+  Shared code-entry card, used by both gates.
 
-  Deliberately plain: four digits, a confirm and a cancel. Anything more here
-  would suggest the code carries more weight than it does - it is a guard
-  against a mis-tap, not an access control.
+  Icon, title, body and confirm label are filled in by requirePin(), because
+  the two gates have to be told apart at a glance: a technician who meets both
+  will otherwise see the same box twice and try the same digits in both.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -15,9 +15,19 @@
     android:orientation="vertical"
     android:padding="20dp">
 
+    <ImageView
+        android:id="@+id/pinIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="center_horizontal"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_lock" />
+
     <TextView
+        android:id="@+id/pinTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
         android:gravity="center"
         android:text="@string/pin_title"
         android:textColor="@color/text_primary"
@@ -25,6 +35,7 @@
         android:textStyle="bold" />
 
     <TextView
+        android:id="@+id/pinBody"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
@@ -49,7 +60,6 @@
         android:importantForAutofill="no"
         android:inputType="numberPassword"
         android:letterSpacing="0.4"
-        android:maxLength="4"
         android:textColor="@color/text_primary"
         android:textSize="26sp" />
 
