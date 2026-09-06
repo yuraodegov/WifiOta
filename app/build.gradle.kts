@@ -14,9 +14,12 @@ android {
     ndkVersion = "26.1.10909125"
 
     defaultConfig {
-        // Deliberately different from namespace: Android treats this as a brand
-        // new app, so it cannot clash with the copy already on the phone.
-        applicationId = "com.strauss.wifiota.v2"
+        // Distinct from both the namespace and the full app's id. Android keys
+        // an installation by applicationId, so this is what lets the pilot sit
+        // on the phone next to the full version instead of replacing it.
+        // Side effect worth knowing: settings live per applicationId, so the
+        // pilot starts with an empty Setup - SSID and passphrase go in again.
+        applicationId = "com.strauss.wifiota.pilot"
         // WifiNetworkSpecifier requires API 29. Nothing older can do this.
         minSdk = 29
         targetSdk = 34
