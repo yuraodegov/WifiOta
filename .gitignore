@@ -5,3 +5,6 @@ app/build/
 local.properties
 build.log
 *.log
+
+# Bundled firmware ships with the code
+!firmware/*.bin
