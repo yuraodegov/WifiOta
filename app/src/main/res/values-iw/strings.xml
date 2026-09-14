@@ -118,8 +118,11 @@
     <string name="pin_body">נדרש קוד לפתיחת ההגדרות.</string>
     <string name="pin_ok">פתח</string>
     <string name="pin_wrong">קוד שגוי</string>
-    <string name="pin_body_activate">יש להזין קוד הפעלה כדי להתחיל להשתמש באפליקציה.</string>
+    <string name="pin_body_activate">יש למסור את מזהה המכשיר כדי לקבל קוד הפעלה.</string>
     <string name="pin_activate">הפעל</string>
     <string name="pin_title_activate">הפעלת האפליקציה</string>
     <string name="pin_title_setup">ההגדרות מוגנות</string>
+    <string name="device_id">מזהה מכשיר</string>
+    <string name="copied">הועתק</string>
+    <string name="pin_wait">יותר מדי ניסיונות – יש להמתין רגע</string>
 </resources>

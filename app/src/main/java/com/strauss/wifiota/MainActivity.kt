@@ -1,6 +1,8 @@
 package com.strauss.wifiota
 
 import android.app.AlertDialog
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
@@ -22,6 +24,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -896,7 +899,8 @@ class MainActivity : AppCompatActivity() {
                     // value here breaks connecting without any visible sign of
                     // why - so this is the one place the code is asked for.
                     if (Pilot.V1) requirePin(
-                        pin = Pilot.FLASH_PIN,
+                        expected = { it == Pilot.FLASH_PIN },
+                        length = Pilot.FLASH_PIN.length,
                         iconRes = R.drawable.ic_settings,
                         titleRes = R.string.pin_title_setup,
                         bodyRes = R.string.pin_body,
@@ -959,12 +963,15 @@ class MainActivity : AppCompatActivity() {
      * nothing to show behind it.
      */
     private fun requirePin(
-        pin: String,
+        expected: (String) -> Boolean,
+        length: Int,
         iconRes: Int,
         titleRes: Int,
         bodyRes: Int,
         okRes: Int,
         accentRes: Int,
+        /** Shown above the field when there is one to read out. */
+        deviceId: String? = null,
         cancellable: Boolean = true,
         onCancel: () -> Unit = {},
         onOk: () -> Unit
@@ -975,6 +982,7 @@ class MainActivity : AppCompatActivity() {
         val okButton = view.findViewById<Button>(R.id.pinOk)
         val cancelButton = view.findViewById<Button>(R.id.pinCancel)
         val icon = view.findViewById<ImageView>(R.id.pinIcon)
+        val idBlock = view.findViewById<View>(R.id.pinIdBlock)
 
         // Icon, title and accent colour are what separate the two gates. The
         // wording alone is not enough - people recognise a dialog by its shape
@@ -984,9 +992,24 @@ class MainActivity : AppCompatActivity() {
         view.findViewById<TextView>(R.id.pinTitle).setText(titleRes)
         view.findViewById<TextView>(R.id.pinBody).setText(bodyRes)
         okButton.setText(okRes)
-        // Length comes from the code itself, so the two gates can differ in
-        // length without the layout knowing anything about either.
-        input.filters = arrayOf(InputFilter.LengthFilter(pin.length))
+        input.filters = arrayOf(InputFilter.LengthFilter(length))
+
+        if (deviceId != null) {
+            idBlock.visibility = View.VISIBLE
+            val idText = view.findViewById<TextView>(R.id.pinIdValue)
+            idText.text = deviceId
+            // Long press copies it: reading eight characters down a phone line
+            // invites mistakes, and this is usually done over a messaging app
+            // anyway.
+            idText.setOnLongClickListener {
+                val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                cm.setPrimaryClip(ClipData.newPlainText("device id", deviceId))
+                Toast.makeText(this, R.string.copied, Toast.LENGTH_SHORT).show()
+                true
+            }
+        } else {
+            idBlock.visibility = View.GONE
+        }
 
         val dialog = AlertDialog.Builder(this).setView(view).create()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
@@ -1000,14 +1023,30 @@ class MainActivity : AppCompatActivity() {
         cancelButton.visibility = if (cancellable) View.VISIBLE else View.GONE
         dialog.setOnCancelListener { onCancel() }
 
+        var wrongTries = 0
+
         fun submit() {
-            if (input.text.toString() == pin) {
+            if (expected(input.text.toString())) {
                 dialog.dismiss()
                 onOk()
-            } else {
-                error.visibility = View.VISIBLE
-                input.text.clear()
-                log("Code rejected")
+                return
+            }
+
+            wrongTries++
+            error.visibility = View.VISIBLE
+            input.text.clear()
+            log("Code rejected")
+
+            // Six digits is a million combinations, but a patient person with a
+            // script could still walk them. Locking the button for a few
+            // seconds after every third miss makes that take weeks.
+            if (wrongTries % 3 == 0) {
+                okButton.isEnabled = false
+                error.setText(R.string.pin_wait)
+                okButton.postDelayed({
+                    okButton.isEnabled = true
+                    error.setText(R.string.pin_wrong)
+                }, LOCKOUT_MS)
             }
         }
 
@@ -1023,20 +1062,26 @@ class MainActivity : AppCompatActivity() {
     /**
      * One-time activation, checked before anything else is usable.
      *
-     * The accepted state lives in the same preferences as the rest of the
-     * settings, so uninstalling or clearing app data asks again - which is the
-     * intended behaviour, not a gap.
+     * The code is per-device - see [Activation]. Accepted state lives in the
+     * app's own preferences, so clearing app data or reinstalling asks again;
+     * that is intended, since a fresh install on a new phone should not inherit
+     * an activation.
      */
     private fun requireActivation() {
         if (prefs().getBoolean("activated", false)) return
 
+        val id = Activation.deviceId(this)
+        log("Device id: $id")
+
         requirePin(
-            pin = Pilot.UNLOCK_PIN,
+            expected = { it == Activation.codeFor(id) },
+            length = Activation.CODE_LENGTH,
             iconRes = R.drawable.ic_lock,
             titleRes = R.string.pin_title_activate,
             bodyRes = R.string.pin_body_activate,
             okRes = R.string.pin_activate,
             accentRes = R.color.accent,
+            deviceId = id,
             cancellable = false,
             onCancel = { finish() }
         ) {
@@ -1224,5 +1269,8 @@ class MainActivity : AppCompatActivity() {
         const val DEFAULT_IP = "192.168.4.1"
         const val MENU_SETUP = 1
         const val MENU_LOG = 2
+
+        /** Button lock after three wrong codes in a row. */
+        const val LOCKOUT_MS = 15_000L
     }
 }

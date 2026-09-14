@@ -129,8 +129,11 @@
     <string name="pin_body">The code is required to open Setup.</string>
     <string name="pin_ok">Open</string>
     <string name="pin_wrong">Wrong code</string>
-    <string name="pin_body_activate">Enter the activation code to start using the app.</string>
+    <string name="pin_body_activate">Read the device ID out to get an activation code.</string>
     <string name="pin_activate">Activate</string>
     <string name="pin_title_activate">App activation</string>
     <string name="pin_title_setup">Setup is protected</string>
+    <string name="device_id">Device ID</string>
+    <string name="copied">Copied</string>
+    <string name="pin_wait">Too many attempts – wait a moment</string>
 </resources>

@@ -1,9 +1,35 @@
 import groovy.json.JsonSlurper
 import java.security.MessageDigest
+import java.util.Properties
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+/**
+ * Shared secret behind the activation codes.
+ *
+ * Kept out of the repository: put ACTIVATION_SECRET in local.properties, or set
+ * it as an environment variable on the build machine. The same value has to go
+ * into tools/activation-code.ps1, or the codes it prints will not be accepted.
+ *
+ * The build fails without it rather than falling back to a default - a default
+ * would quietly produce an APK whose codes nobody can generate.
+ */
+val activationSecret: String = run {
+    val local = rootProject.file("local.properties")
+    val fromFile = if (local.exists()) {
+        Properties().apply { local.inputStream().use { load(it) } }
+            .getProperty("ACTIVATION_SECRET")
+    } else null
+
+    fromFile ?: System.getenv("ACTIVATION_SECRET")
+        ?: throw GradleException(
+            "ACTIVATION_SECRET is not set.\n" +
+                "  Add a line to local.properties:  ACTIVATION_SECRET=<your secret>\n" +
+                "  or set it as an environment variable."
+        )
 }
 
 android {
@@ -25,6 +51,8 @@ android {
         targetSdk = 34
         versionCode = 3
         versionName = "1.2-pilot"
+
+        buildConfigField("String", "ACTIVATION_SECRET", "\"$activationSecret\"")
     }
 
     sourceSets {
@@ -42,8 +70,28 @@ android {
         noCompress += "bin"
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     buildTypes {
-        release { isMinifyEnabled = false }
+        release {
+            // R8 renames classes and methods and strips what is unused. It does
+            // not encrypt anything - string constants stay readable - but it
+            // turns the decompiled source into something that takes real effort
+            // to follow rather than something that reads like the original.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+
+            // TEMPORARY: signed with the debug key so a release build can be
+            // produced and installed at all. Replace with the real signing
+            // config once the release keystore exists - see SIGNING_KEYVAULT.md.
+            signingConfig = signingConfigs.getByName("debug")
+        }
     }
 
     compileOptions {

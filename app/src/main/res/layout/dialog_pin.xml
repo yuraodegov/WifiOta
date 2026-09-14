@@ -7,6 +7,7 @@
   will otherwise see the same box twice and try the same digits in both.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginStart="16dp"
@@ -49,6 +50,41 @@
       still opens the number pad instead of the full keyboard. Set here as
       well as in code so the layout preview matches what actually runs.
     -->
+    <!--
+      Device id, shown only on the activation gate. Big and widely spaced
+      because it gets read out loud or photographed; long press copies it.
+    -->
+    <LinearLayout
+        android:id="@+id/pinIdBlock"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:background="@drawable/bg_field"
+        android:orientation="vertical"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/device_id"
+            android:textColor="@color/text_muted"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/pinIdValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:letterSpacing="0.15"
+            android:textColor="@color/accent"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            tools:text="A7F3-21B9" />
+    </LinearLayout>
+
     <EditText
         android:id="@+id/pinInput"
         android:layout_width="match_parent"
