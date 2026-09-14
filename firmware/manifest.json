@@ -1,7 +1,7 @@
 {
     "model":  "Tamar",
     "component":  "hmi",
-    "version":  "0.02.132",
-    "file":  "tamar-hmi-0.02.132_enc.bin",
-    "sha256":  "960678867a3d3c62e6487918355a29dca9a837d4ed9c05893172ec1f207c0eb6"
+    "version":  "0.02.123",
+    "file":  "tamar-hmi-0.02.123_enc.bin",
+    "sha256":  "8047b4e2d892b14680c8284ff3cb0679870879a036ddaeb1b62e883101d7efcf"
 }
