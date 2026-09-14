@@ -6,7 +6,15 @@ on:
 
 jobs:
   build:
+
     runs-on: ubuntu-latest
+
+    # The activation secret is not in the repository - local.properties is
+    # ignored - so CI takes it from a repository secret of the same name.
+    # Without it the build stops at build.gradle.kts rather than producing an
+    # APK whose codes nobody can generate.
+    env:
+      ACTIVATION_SECRET: ${{ secrets.ACTIVATION_SECRET }}
 
     steps:
       - uses: actions/checkout@v4
